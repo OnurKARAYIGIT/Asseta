@@ -1,0 +1,33 @@
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2rem;
+}
+
+.profile-info-card {
+  grid-column: span 12;
+}
+
+.profile-assignments-card {
+  grid-column: span 12;
+}
+
+.profile-history-card {
+  grid-column: span 12;
+}
+
+@media (min-width: 1024px) {
+  .profile-info-card {
+    grid-column: span 4;
+  }
+  .profile-assignments-card {
+    grid-column: span 8;
+  }
+  .profile-history-card {
+    grid-column: span 12;
+  }
+}
+
+.profile-card h2 {
+  margin-top: 0;
+}

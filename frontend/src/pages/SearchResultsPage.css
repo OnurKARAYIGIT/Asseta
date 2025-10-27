@@ -1,0 +1,59 @@
+.search-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.result-category h2 {
+  font-size: 1.2rem;
+  color: var(--text-color-light);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: background-color 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.result-item:hover {
+  background-color: var(--light-gray-color);
+}
+
+.result-icon {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.result-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-title {
+  font-weight: 500;
+  color: var(--text-color); /* Tanımlı olmayan değişken düzeltildi */
+}
+
+.result-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-color-light);
+}
+
+/* Farklı sonuç türleri için ikon renkleri */
+.result-item:has(.fa-box-open) .result-icon {
+  color: #fd7e14; /* Turuncu */
+}
+
+.result-item:has(.fa-user) .result-icon {
+  color: #6f42c1; /* Mor */
+}

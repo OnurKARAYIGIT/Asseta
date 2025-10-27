@@ -1,0 +1,98 @@
+/* c:\Asseta\frontend\src\pages\AuditLogPage.css */
+
+.timeline-container {
+  margin-top: 2rem;
+}
+
+.timeline-group {
+  margin-bottom: 2.5rem;
+}
+
+.timeline-date-header {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--border-color);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.timeline-icon {
+  position: absolute;
+  left: -30px;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--background-color-light);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  z-index: 1;
+}
+
+.timeline-content {
+  background-color: var(--background-color-light);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between; /* Başlık elemanlarını iki yana yasla */
+  margin-bottom: 0.5rem;
+}
+
+.timeline-user {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.timeline-action-type {
+  font-size: 0.9rem;
+  color: var(--text-color-light);
+  background-color: var(--background-color);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.timeline-details {
+  margin: 0;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.timeline-time {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem; /* İkon ve saat arası boşluk */
+  font-size: 0.85rem; /* Yazı tipini biraz büyüt */
+  color: var(--text-color-light);
+  font-weight: 500; /* Yazıyı biraz daha belirgin yap */
+}

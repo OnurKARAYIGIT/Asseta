@@ -1,0 +1,107 @@
+.accordion-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.accordion-item {
+  background-color: var(--card-background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.accordion-item:hover {
+  box-shadow: var(--box-shadow-sm);
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+}
+
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.accordion-title strong {
+  font-size: 1.1rem;
+}
+
+.accordion-header .badge {
+  background-color: var(--secondary-color);
+  color: var(--white-color);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 12px;
+}
+
+.expand-icon {
+  font-size: 1.2rem;
+  color: var(--text-color-light);
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.accordion-content .table-container {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  max-height: 250px; /* Liste çok uzunsa kaydırma çubuğu çıksın */
+  overflow-y: auto;
+  margin-top: 1.5rem;
+}
+
+.accordion-content table {
+  margin-top: 0;
+}
+
+.accordion-content .modal-actions {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+/* Akordeon içindeki tablonun stilini iyileştir */
+.accordion-content .table-container {
+  margin-bottom: 1rem; /* Tablo ile butonlar arasına boşluk ekle */
+}
+
+.accordion-content table {
+  background-color: var(--background-color); /* Ana arkaplan rengini al */
+}
+
+.accordion-content th,
+.accordion-content td {
+  padding: 0.8rem 1rem; /* Hücre içi boşlukları artır */
+}
+
+.accordion-content th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(
+    --card-background-color
+  ); /* Kaydırma sırasında arkaplanı koru */
+}
+.accordion-content tbody tr:nth-child(even) {
+  background-color: var(--light-gray-color); /* Zebra deseni */
+}
+
+.accordion-content tbody tr:hover {
+  background-color: var(--primary-focus-color); /* Vurgu efekti */
+}

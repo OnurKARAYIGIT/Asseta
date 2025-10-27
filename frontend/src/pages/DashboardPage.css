@@ -1,0 +1,162 @@
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.dashboard-card {
+  background-color: var(--card-background-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--border-color); /* Genel kenarlık */
+  border-left: 5px solid var(--border-color); /* Sol kenarlık için varsayılan renk */
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--box-shadow);
+  border-left-color: var(--primary-color);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  background-color: var(--background-color-light);
+  padding: 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.dashboard-card:hover .card-icon {
+  background-color: var(--white-color);
+}
+
+/* Kart İkon Renkleri */
+.total-assignments-card .card-icon {
+  color: #17a2b8; /* Turkuaz */
+}
+
+.total-items-card .card-icon {
+  color: #fd7e14; /* Turuncu */
+}
+
+.total-users-card .card-icon {
+  color: #6f42c1; /* Mor */
+}
+
+.total-locations-card .card-icon {
+  color: #28a745; /* Yeşil */
+}
+
+.card-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: var(--text-color); /* Tanımlı olmayan değişken düzeltildi */
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(
+    --secondary-color
+  ); /* Koyu temada okunabilirlik için renk değiştirildi */
+}
+
+.recent-activity {
+  margin-top: 3rem;
+  background-color: var(--card-background-color);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: var(--box-shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.recent-activity h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.recent-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recent-activity-list li a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.recent-activity-list li a:hover {
+  background-color: var(--background-color);
+}
+
+.activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-item-name {
+  font-weight: 600;
+  color: var(--text-color-dark);
+}
+
+.activity-personnel,
+.activity-date {
+  font-size: 0.9rem;
+  color: var(--text-color-light);
+}
+
+.activity-arrow {
+  color: var(--text-color-light);
+  transition: transform 0.2s ease;
+}
+
+.recent-activity-list li a:hover .activity-arrow {
+  transform: translateX(5px);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.chart-container {
+  background-color: var(--card-background-color);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: var(--box-shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.chart-wrapper {
+  height: 350px;
+}

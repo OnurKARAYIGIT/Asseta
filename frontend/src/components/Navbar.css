@@ -1,0 +1,359 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem; /* Dikey ve yatay boşlukları azaltarak daha kompakt hale getir */
+  background-color: var(--primary-color);
+  box-shadow: var(--box-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* Logo ve menü arasındaki boşluğu azalt */
+}
+
+.nav-logo-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo {
+  height: 70px; /* Logoyu biraz daha büyüt */
+  width: 105px;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Menü elemanları arasındaki boşluğu azalt */
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--white-color);
+  background-color: var(
+    --primary-hover-color
+  ); /* Aktif linkin arka planını belirginleştir */
+}
+
+/* Ana Menü İkon Renkleri */
+.nav-assignments svg {
+  color: #ffc107; /* Zimmetler - Sarı (Aynı kalabilir, mavi ile uyumlu) */
+}
+.nav-report svg {
+  color: #20c997; /* Rapor - Yeşil/Turkuaz tonu */
+}
+.nav-admin svg {
+  color: #ffb6c1; /* Admin - Açık Pembe */
+}
+
+/* Açılır Menü İkon Renkleri */
+.nav-pending svg {
+  color: #fd7e14; /* Bekleyenler - Turuncu */
+}
+.nav-items svg {
+  color: #20c997; /* Eşyalar - Yeşil */
+}
+.nav-locations svg {
+  color: #6f42c1; /* Konumlar - Mor */
+}
+.nav-audit svg {
+  color: #e83e8c; /* Denetim - Pembe */
+}
+
+/* Açılır Menü Stilleri */
+.nav-item {
+  position: relative;
+}
+
+.dropdown-arrow {
+  font-size: 0.7em;
+  margin-left: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.nav-item .dropdown-menu {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--primary-color);
+  min-width: 200px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 0 0 8px 8px;
+  padding: 0.5rem 0;
+  list-style: none;
+  z-index: 1001; /* Diğer elemanların üzerinde kalmasını sağla */
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s, transform 0.2s ease;
+  transform: translateY(10px);
+}
+
+.nav-item:hover > .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  padding-top: 15px; /* Görsel boşluk için padding ekle */
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.nav-item:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu a {
+  color: rgba(255, 255, 255, 0.85); /* Metin rengini beyaz yap */
+  padding: 0.6rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-menu a:hover {
+  background-color: var(--primary-hover-color);
+  color: var(--white-color);
+}
+
+/* Bildirim Rozeti Stili */
+.badge {
+  background-color: var(--danger-color);
+  color: var(--white-color);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-left: auto; /* İkon ve yazıdan sonra sağa yasla */
+  line-height: 1.2;
+  min-width: 20px;
+  text-align: center;
+  animation: pulse 2s infinite; /* Animasyonu uygula */
+}
+
+/* Rozet için kalp atışı animasyonu */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
+/* Kullanıcı Menüsü Stilleri */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  color: var(
+    --white-color
+  ); /* Değişiklik: Her zaman beyaz olması için düzeltildi */
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.user-name {
+  color: var(
+    --white-color
+  ); /* Değişiklik: Her zaman beyaz olması için düzeltildi */
+}
+
+.user-avatar-icon {
+  color: #ffc107; /* Sarı - Diğer sağ üst ikonlarla uyumlu */
+  font-size: 1.5rem; /* İkonu biraz daha belirgin yapalım */
+}
+.user-menu-arrow {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.datetime-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(
+    --white-color
+  ); /* Bu zaten doğruydu, tutarlılık için kontrol edildi */
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.15
+  ); /* Arka planı biraz daha belirgin yapalım */
+  padding: 0.5rem 1rem;
+  border-radius: 8px; /* Diğer elemanlarla uyumlu kenar yuvarlaklığı */
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* İnce bir kenarlık ekleyelim */
+}
+
+.datetime-icon {
+  font-size: 1.1rem; /* Saat ikonu için boyut */
+  color: var(
+    --white-color
+  ); /* Bu zaten doğruydu, tutarlılık için kontrol edildi */
+  opacity: 0.8;
+}
+
+.datetime-icon.small {
+  font-size: 0.9rem; /* Tarih ikonu için daha küçük boyut */
+}
+
+.datetime-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem; /* Satırlar arası boşluk */
+  line-height: 1.2;
+}
+
+.time {
+  font-weight: 600; /* Saati daha kalın yapalım */
+  font-size: 1rem;
+}
+
+.date {
+  font-size: 0.9rem; /* Gün yazısını biraz büyütelim */
+  opacity: 0.9; /* Daha görünür yapalım */
+}
+
+.datetime-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* Sağ taraftaki elemanlar arası boşluğu artırarak daha ferah bir görünüm sağla */
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-action-btn {
+  background: none;
+  border: none;
+  color: var(
+    --white-color
+  ); /* Bu zaten doğruydu, tutarlılık için kontrol edildi */
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.nav-action-btn:hover {
+  background-color: var(--primary-hover-color);
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.search-container.active {
+  width: 220px;
+  opacity: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: var(--white-color);
+  outline: none;
+  transition: background-color 0.2s;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-input:focus {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.theme-toggle-btn {
+  color: #ffc107; /* Sarı */
+}
+
+/* Hareketsizlik Sayacı Stilleri */
+.inactivity-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  transition: color 0.3s;
+}
+
+.inactivity-timer.warning {
+  color: #ffc107; /* Sarı uyarı rengi */
+  font-weight: bold;
+  animation: pulse-timer 1.5s infinite;
+}
+
+@keyframes pulse-timer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
