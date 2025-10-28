@@ -1,125 +1,88 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import { FaSave } from "react-icons/fa";
-import { useAuth } from "../components/AuthContext";
+import { toast } from "react-toastify";
+import AssignmentEditForm from "../components/assignments/AssignmentEditForm";
 
 const AssignmentEditPage = () => {
   const { id: assignmentId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [assignment, setAssignment] = useState(null);
-  const [status, setStatus] = useState("zimmetli");
+  const [status, setStatus] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [assignmentNotes, setAssignmentNotes] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [updateError, setUpdateError] = useState("");
 
-  const { userInfo } = useAuth();
-
-  useEffect(() => {
-    const fetchAssignment = async () => {
-      try {
-        const config = {
-          headers: {
-            Authorization: `Bearer ${userInfo.token}`,
-          },
-        };
-        const { data } = await axios.get(
-          `/api/assignments/${assignmentId}`,
-          config
-        );
-        setAssignment(data);
-        setStatus(data.status);
-        setAssignmentNotes(data.assignmentNotes || "");
-        if (data.returnDate) {
-          setReturnDate(data.returnDate.substring(0, 10)); // Tarihi YYYY-MM-DD formatına çevir
-        }
-        setLoading(false);
-      } catch (err) {
-        setError("Zimmet detayı getirilemedi.");
-        setLoading(false);
+  // --- React Query ile Veri Çekme ---
+  const {
+    data: assignment,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["assignment", assignmentId],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/assignments/${assignmentId}`);
+      return data;
+    },
+    enabled: !!assignmentId,
+    onSuccess: (data) => {
+      // Veri başarıyla çekildiğinde form state'lerini doldur
+      setStatus(data.status);
+      setAssignmentNotes(data.assignmentNotes || "");
+      if (data.returnDate) {
+        setReturnDate(data.returnDate.substring(0, 10));
       }
-    };
-    fetchAssignment();
-  }, [assignmentId, userInfo?.token]);
+    },
+  });
+
+  // --- React Query ile Veri Güncelleme ---
+  const updateMutation = useMutation({
+    mutationFn: (updatedData) =>
+      axiosInstance.put(`/assignments/${assignmentId}`, updatedData),
+    onSuccess: () => {
+      // Başarılı güncelleme sonrası ilgili sorguları geçersiz kıl
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment", assignmentId] });
+      toast.success("Zimmet başarıyla güncellendi.");
+      navigate("/zimmetler");
+    },
+    onError: (err) => {
+      setUpdateError(
+        err.response?.data?.message || "Güncelleme sırasında bir hata oluştu."
+      );
+    },
+  });
 
   const submitHandler = async (e) => {
     e.preventDefault();
     setUpdateError("");
-    try {
-      const config = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-      await axios.put(
-        `/api/assignments/${assignmentId}`,
-        { status, returnDate, assignmentNotes },
-        config
-      );
-      navigate("/zimmetler");
-    } catch (err) {
-      setUpdateError("Güncelleme sırasında bir hata oluştu.");
-    }
+    updateMutation.mutate({ status, returnDate, assignmentNotes });
   };
 
   return (
     <div className="page-container">
       <h1>Zimmet Detayı ve Güncelleme</h1>
-      {loading ? (
+      {isLoading ? (
         <Loader />
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
+      ) : isError ? (
+        <p style={{ color: "red" }}>{error.message}</p>
       ) : (
         assignment && (
-          <form onSubmit={submitHandler}>
-            <p>
-              <strong>Personel:</strong> {assignment.personnelName}
-            </p>
-            <p>
-              <strong>Eşya:</strong> {assignment.item.name} (SN:{" "}
-              {assignment.item.serialNumber})
-            </p>
-            <div style={{ margin: "1.5rem 0" }}>
-              <label>Zimmet Durumu</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="zimmetli">Zimmetli</option>
-                <option value="iade edildi">İade Edildi</option>
-              </select>
-            </div>
-            {status === "iade edildi" && (
-              <div style={{ margin: "1.5rem 0" }}>
-                <label>İade Tarihi</label>
-                <input
-                  type="date"
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                />
-              </div>
-            )}
-            <div style={{ margin: "1.5rem 0" }}>
-              <label>Açıklama / Notlar</label>
-              <textarea
-                rows="4"
-                value={assignmentNotes}
-                onChange={(e) => setAssignmentNotes(e.target.value)}
-              ></textarea>
-            </div>
-            {updateError && <p style={{ color: "red" }}>{updateError}</p>}
-            <button
-              type="submit"
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              <FaSave /> Değişiklikleri Kaydet
-            </button>
-          </form>
+          <AssignmentEditForm
+            assignment={assignment}
+            status={status}
+            setStatus={setStatus}
+            returnDate={returnDate}
+            setReturnDate={setReturnDate}
+            assignmentNotes={assignmentNotes}
+            setAssignmentNotes={setAssignmentNotes}
+            onSubmit={submitHandler}
+            updateError={updateError}
+          />
         )
       )}
     </div>

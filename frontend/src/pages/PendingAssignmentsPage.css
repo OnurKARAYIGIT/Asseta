@@ -55,6 +55,8 @@
 .accordion-content {
   padding: 0 1.5rem 1.5rem 1.5rem;
   border-top: 1px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box; /* Padding'i genişlik hesaplamasına dahil et */
 }
 
 .accordion-content .table-container {
@@ -63,6 +65,12 @@
   max-height: 250px; /* Liste çok uzunsa kaydırma çubuğu çıksın */
   overflow-y: auto;
   margin-top: 1.5rem;
+  width: 100%; /* Konteynerin tam genişlik almasını sağla */
+}
+
+.accordion-content .table-container table {
+  width: 100%; /* Tablonun her zaman tam genişlik almasını sağla */
+  table-layout: auto; /* İçeriğe göre sütun genişliklerini ayarla, fixed bazen daraltabilir */
 }
 
 .accordion-content table {
@@ -73,7 +81,7 @@
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
-  justify-content: flex-end;
+  justify-content: flex-end; /* Butonları sağa hizala */
 }
 
 /* Akordeon içindeki tablonun stilini iyileştir */
@@ -104,4 +112,24 @@
 
 .accordion-content tbody tr:hover {
   background-color: var(--primary-focus-color); /* Vurgu efekti */
+}
+
+/* Akordeon içindeki modal-actions buton stillerini güçlendir */
+.accordion-content .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem; /* Butonlar arasındaki boşluğu artır */
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.accordion-content .modal-actions button {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+}
+
+.accordion-content .modal-actions button.danger {
+  background-color: var(--danger-color);
+  color: var(--white-color);
 }

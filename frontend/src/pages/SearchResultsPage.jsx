@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import { FaSearch, FaClipboardList, FaBoxOpen, FaUser } from "react-icons/fa";
+import { FaSearch } from "react-icons/fa";
 import "./SearchResultsPage.css";
+import SearchResultCategory from "../components/search/SearchResultCategory";
 
 const SearchResultsPage = () => {
   const location = useLocation();
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // Sadece arama terimini göstermek için
 
   const allPages = [
     { name: "Ana Panel", path: "/dashboard" },
@@ -21,76 +21,33 @@ const SearchResultsPage = () => {
     { name: "Denetim Kayıtları", path: "/audit-logs" },
   ];
 
+  // URL'den arama terimini al
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const query = params.get("q") || "";
     setSearchTerm(query);
-
-    if (query) {
-      const fetchResults = async () => {
-        setLoading(true);
-        try {
-          const { data } = await axiosInstance.get(`/search?q=${query}`);
-          setResults(data);
-        } catch (error) {
-          console.error("Arama sonuçları alınamadı:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchResults();
-    } else {
-      setResults(null);
-      setLoading(false);
-    }
   }, [location.search]);
+
+  // --- React Query ile Veri Çekme ---
+  const {
+    data: results,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["searchResults", searchTerm],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/search?q=${searchTerm}`);
+      return data;
+    },
+    enabled: !!searchTerm, // Sadece bir arama terimi varsa sorguyu çalıştır
+  });
 
   const filteredPages = searchTerm
     ? allPages.filter((page) =>
         page.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
-
-  const renderResult = (item, type) => {
-    if (type === "assignment") {
-      return (
-        <Link to={`/assignments?openModal=${item._id}`} className="result-item">
-          <FaClipboardList className="result-icon" />
-          <div className="result-details">
-            <span className="result-title">
-              {item.personnelName} - {item.item.name}
-            </span>
-            <span className="result-subtitle">Zimmet Kaydı</span>
-          </div>
-        </Link>
-      );
-    }
-    if (type === "item") {
-      return (
-        <Link to="/items" className="result-item">
-          <FaBoxOpen className="result-icon" />
-          <div className="result-details">
-            <span className="result-title">
-              {item.name} ({item.assetTag})
-            </span>
-            <span className="result-subtitle">Eşya</span>
-          </div>
-        </Link>
-      );
-    }
-    if (type === "user") {
-      return (
-        <Link to="/admin" className="result-item">
-          <FaUser className="result-icon" />
-          <div className="result-details">
-            <span className="result-title">{item.username}</span>
-            <span className="result-subtitle">Kullanıcı</span>
-          </div>
-        </Link>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="page-container">
@@ -101,30 +58,27 @@ const SearchResultsPage = () => {
         <strong>"{searchTerm}"</strong> için bulunan sonuçlar:
       </p>
 
-      {loading ? (
+      {isLoading ? (
         <Loader />
+      ) : isError ? (
+        <p className="error-message">{error.message}</p>
       ) : (
         <div className="search-results-container">
-          {results?.assignments?.length > 0 && (
-            <div className="result-category">
-              <h2>Zimmetler</h2>
-              {results.assignments.map((item) =>
-                renderResult(item, "assignment")
-              )}
-            </div>
-          )}
-          {results?.items?.length > 0 && (
-            <div className="result-category">
-              <h2>Eşyalar</h2>
-              {results.items.map((item) => renderResult(item, "item"))}
-            </div>
-          )}
-          {results?.users?.length > 0 && (
-            <div className="result-category">
-              <h2>Kullanıcılar</h2>
-              {results.users.map((item) => renderResult(item, "user"))}
-            </div>
-          )}
+          <SearchResultCategory
+            title="Zimmetler"
+            items={results?.assignments}
+            type="assignment"
+          />
+          <SearchResultCategory
+            title="Eşyalar"
+            items={results?.items}
+            type="item"
+          />
+          <SearchResultCategory
+            title="Kullanıcılar"
+            items={results?.users}
+            type="user"
+          />
           {filteredPages.length > 0 && (
             <div className="result-category">
               <h2>Sayfalar</h2>

@@ -18,6 +18,7 @@ import {
   FaSignInAlt,
   FaSearch,
   FaRegCalendarAlt,
+  FaChartBar,
   FaSun,
   FaMoon,
 } from "react-icons/fa";
@@ -32,6 +33,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
   const { pendingCount } = usePendingCount();
 
@@ -94,6 +96,13 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       permission: "personnel-report",
     },
     {
+      to: "/item-report",
+      label: "Eşya Raporu",
+      className: "nav-item-report",
+      icon: <FaChartBar />,
+      permission: "item-report",
+    },
+    {
       to: "/admin",
       label: "Admin Paneli",
       className: "nav-admin",
@@ -126,26 +135,24 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    // Enter'a basıldığında da arama yap, ancak anlık arama zaten yönlendirme yapacak.
-    navigate(`/search?q=${globalSearchTerm}`);
-    setIsSearchVisible(false); // Aramadan sonra çubuğu kapat
+  // Arama kutusu görünür olduğunda input'a odaklan
+  useEffect(() => {
+    if (isSearchVisible && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchVisible]);
+
+  const performSearch = () => {
+    if (globalSearchTerm.trim()) {
+      navigate(`/search?q=${globalSearchTerm}`);
+      setIsSearchVisible(false); // Aramadan sonra çubuğu kapat
+    }
   };
 
-  // Anlık arama için useEffect
-  useEffect(() => {
-    // Sadece arama sayfasındayken anlık arama yap
-    if (location.pathname === "/search") {
-      // Debouncing: Kullanıcı yazmayı bıraktıktan sonra arama yapmak için
-      const debounceTimer = setTimeout(() => {
-        // Boş arama terimi için yönlendirme yapma, URL'i temiz tut
-        if (globalSearchTerm.trim() === "") return;
-        navigate(`/search?q=${globalSearchTerm}`);
-      }, 500); // 500ms gecikme
-      return () => clearTimeout(debounceTimer);
-    }
-  }, [globalSearchTerm, location.pathname, navigate]);
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    performSearch();
+  };
 
   return (
     <nav className="navbar">
@@ -218,24 +225,22 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
         </div>
         <div className="nav-actions" ref={searchContainerRef}>
           <div
-            className={`search-container ${
-              isSearchVisible ? "w-56 opacity-100" : "w-0 opacity-0"
-            }`}
+            className={`search-container ${isSearchVisible ? "active" : ""}`}
           >
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
                 className="search-input"
-                placeholder="Zimmetlerde ara..."
+                placeholder="  Sayfada Ara"
                 value={globalSearchTerm}
                 onChange={(e) => setGlobalSearchTerm(e.target.value)}
-                autoFocus
+                ref={searchInputRef}
               />
             </form>
           </div>
           <button
             className="nav-action-btn"
-            onClick={() => setIsSearchVisible(!isSearchVisible)}
+            onClick={() => setIsSearchVisible((prev) => !prev)}
           >
             <FaSearch />
           </button>

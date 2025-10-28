@@ -1,375 +1,192 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import {
-  FaClock,
-  FaCheck,
-  FaTimes,
-  FaUpload,
-  FaFileDownload,
-  FaTrash,
-  FaChevronDown,
-} from "react-icons/fa";
 import "./PendingAssignmentsPage.css";
-import Modal from "../components/Modal";
+import "./AssignmentsPage.css"; // Pagination stilleri için gerekli
 import { toast } from "react-toastify";
 import { useAuth } from "../components/AuthContext";
 import { usePendingCount } from "../contexts/PendingCountContext";
-import { usePagination } from "../hooks/usePagination";
+import PendingAssignmentsHeader from "../components/pending-assigments/PendingAssignmentsHeader";
+import PersonnelAssignmentAccordion from "../components/pending-assigments/PersonnelAssignmentAccordion";
+import PendingAssignmentsPagination from "../components/pending-assigments/PendingAssignmentsPagination";
+import ApproveAssignmentModal from "../components/pending-assigments/ApproveAssignmentModal";
+import ConfirmationModal from "../components/shared/ConfirmationModal"; // Reddetme için ConfirmationModal kullanacağız
 
 const PendingAssignmentsPage = () => {
-  const [personnelGroups, setPersonnelGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [selectedUserForApproval, setSelectedUserForApproval] = useState(null);
-  const [formFile, setFormFile] = useState(null);
   const [isApproving, setIsApproving] = useState(false);
   const [userToReject, setUserToReject] = useState(null);
   const [expandedUser, setExpandedUser] = useState(null);
 
   // Sayfalama için state'ler
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const { currentPage, setCurrentPage, paginationRange } = usePagination({
-    totalPages,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { refetchPendingCount } = usePendingCount();
   const { userInfo } = useAuth();
+  const queryClient = useQueryClient();
 
-  const fetchPendingAssignments = useCallback(async () => {
-    setLoading(true);
-    try {
+  // --- React Query ile Veri Çekme ---
+  const {
+    data: pendingData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["pendingAssignments", { currentPage, itemsPerPage }],
+    queryFn: async () => {
       const { data } = await axiosInstance.get("/assignments/pending-grouped", {
         params: {
           page: currentPage,
           limit: itemsPerPage,
         },
       });
-      // Backend'den gelen gruplanmış veriyi doğrudan state'e atıyoruz.
-      setPersonnelGroups(data.assignments || []); // `data.assignments` artık gruplanmış bir dizi
-      setTotalPages(data.pages || 1);
-    } catch (err) {
-      setError("Bekleyen zimmetler getirilemedi.");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, itemsPerPage]);
+      return data;
+    },
+    keepPreviousData: true,
+  });
 
-  useEffect(() => {
-    fetchPendingAssignments();
-  }, [fetchPendingAssignments]);
+  // React Query'den gelen verileri bileşenin kullanacağı değişkenlere ata
+  const personnelGroups = pendingData?.assignments || [];
+  const totalPages = pendingData?.pages || 1;
 
-  const handleApprove = async () => {
-    if (!selectedUserForApproval || !formFile) {
-      toast.error("Lütfen imzalı zimmet formunu yükleyin.");
-      return;
-    }
+  // --- React Query ile Veri Değiştirme (Mutations) ---
+  const invalidatePendingAssignments = () => {
+    queryClient.invalidateQueries({ queryKey: ["pendingAssignments"] });
+    refetchPendingCount();
+  };
 
-    setIsApproving(true);
+  const approveMutation = useMutation({
+    mutationFn: async ({ formFile, assignments }) => {
+      const fileFormData = new FormData();
+      fileFormData.append("form", formFile);
 
-    const fileFormData = new FormData();
-    fileFormData.append("form", formFile);
-
-    try {
-      // 1. Dosyayı yükle
       const { data: uploadData } = await axiosInstance.post(
         "/upload",
         fileFormData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      // 2. Seçili kullanıcıya ait tüm bekleyen zimmetleri güncelle
-      const approvalPromises = selectedUserForApproval.assignments.map(
-        (assignment) =>
-          axiosInstance.put(`/assignments/${assignment._id}`, {
-            status: "Zimmetli",
-            formPath: uploadData.filePath,
-          })
+      const approvalPromises = assignments.map((assignment) =>
+        axiosInstance.put(`/assignments/${assignment._id}`, {
+          status: "Zimmetli",
+          formPath: uploadData.filePath,
+        })
       );
 
-      await Promise.all(approvalPromises);
-
+      return Promise.all(approvalPromises);
+    },
+    onSuccess: () => {
       toast.success("Zimmet başarıyla onaylandı.");
+      invalidatePendingAssignments();
       setSelectedUserForApproval(null);
-      setFormFile(null);
-      // Tüm listeyi yeniden çekmek yerine, onaylanan grubu state'ten çıkar
-      setPersonnelGroups((prev) =>
-        prev.filter(
-          (group) =>
-            group.personnelName !== selectedUserForApproval.personnelName
-        )
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          "Onaylama işlemi sırasında bir hata oluştu."
       );
-      refetchPendingCount(); // Rozeti güncelle
-    } catch (err) {
-      toast.error("Onaylama işlemi sırasında bir hata oluştu.");
-      console.error(err);
-    } finally {
+    },
+    onSettled: () => {
       setIsApproving(false);
+    },
+  });
+
+  const handleApprove = async (formFile) => {
+    if (!selectedUserForApproval || !formFile) {
+      toast.error("Lütfen imzalı zimmet formunu yükleyin.");
+      return;
     }
+
+    setIsApproving(true);
+    approveMutation.mutate({
+      formFile,
+      assignments: selectedUserForApproval.assignments,
+    });
   };
 
   const handleReject = (personnelName, assignments) => {
     setUserToReject({ personnelName, assignments });
   };
 
-  const confirmRejectHandler = async () => {
-    if (!userToReject) return;
-    try {
-      // Seçili kullanıcıya ait tüm bekleyen zimmetleri sil
-      const rejectionPromises = userToReject.assignments.map((assignment) =>
+  const rejectMutation = useMutation({
+    mutationFn: (assignments) => {
+      const rejectionPromises = assignments.map((assignment) =>
         axiosInstance.delete(`/assignments/${assignment._id}`)
       );
-
-      await Promise.all(rejectionPromises);
-
+      return Promise.all(rejectionPromises);
+    },
+    onSuccess: () => {
       toast.success("Zimmet talebi başarıyla reddedildi ve silindi.");
+      invalidatePendingAssignments();
       setUserToReject(null);
-      // Tüm listeyi yeniden çekmek yerine, reddedilen grubu state'ten çıkar
-      setPersonnelGroups((prev) =>
-        prev.filter(
-          (group) => group.personnelName !== userToReject.personnelName
-        )
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          `Reddetme işlemi sırasında bir hata oluştu.`
       );
-      refetchPendingCount(); // Rozeti güncelle
-    } catch (err) {
-      toast.error(`Reddetme işlemi sırasında bir hata oluştu: ${err.message}`);
-      console.error(err);
-    }
-  };
+      setUserToReject(null);
+    },
+  });
 
-  const toggleUserExpansion = (personnelName) => {
-    if (expandedUser === personnelName) {
-      setExpandedUser(null);
-    } else {
-      setExpandedUser(personnelName);
-    }
+  const confirmRejectHandler = async () => {
+    if (!userToReject) return;
+    rejectMutation.mutate(userToReject.assignments);
   };
 
   return (
     <div className="page-container">
-      <h1>
-        <FaClock style={{ color: "var(--secondary-color)" }} /> İmza Bekleyen
-        Zimmetler
-      </h1>
-      {loading ? (
+      <PendingAssignmentsHeader />
+      {isLoading ? (
         <Loader />
       ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
+        <p style={{ color: "red" }}>{error.message}</p>
       ) : (
         <div className="accordion-container">
-          {personnelGroups.map((group) => {
-            const isExpanded = expandedUser === group.personnelName;
-            return (
-              <div key={group.personnelName} className="accordion-item">
-                <div
-                  className="accordion-header"
-                  onClick={() => toggleUserExpansion(group.personnelName)}
-                >
-                  <div className="accordion-title">
-                    <strong>{group.personnelName}</strong>
-                    <span className="badge">
-                      {group.assignments.length} Bekleyen Eşya
-                    </span>
-                  </div>
-                  <FaChevronDown
-                    className={`expand-icon ${isExpanded ? "expanded" : ""}`}
-                  />
-                </div>
-                {isExpanded && (
-                  <div className="accordion-content">
-                    <div className="table-container">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Eşya Adı</th>
-                            <th>Demirbaş No</th>
-                            <th>Seri No</th>
-                            <th>Oluşturulma Tarihi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.assignments.map(
-                            (assignment) =>
-                              assignment.item && (
-                                <tr key={assignment._id}>
-                                  <td>{assignment.item?.name || "N/A"}</td>
-                                  <td>{assignment.item?.assetTag || "-"}</td>
-                                  <td>
-                                    {assignment.item?.serialNumber || "-"}
-                                  </td>
-                                  <td>
-                                    {new Date(
-                                      assignment.createdAt
-                                    ).toLocaleDateString()}
-                                  </td>
-                                </tr>
-                              )
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div
-                      className="modal-actions"
-                      style={{ justifyContent: "flex-end" }}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReject(group.personnelName, group.assignments);
-                        }}
-                        className="danger"
-                      >
-                        <FaTrash />{" "}
-                        {group.assignments.length > 1
-                          ? "Toplu Reddet"
-                          : "Reddet"}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedUserForApproval({
-                            personnelName: group.personnelName,
-                            assignments: group.assignments,
-                          });
-                        }}
-                      >
-                        <FaCheck />{" "}
-                        {group.assignments.length > 1
-                          ? "Toplu Onayla"
-                          : "Onayla"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Sayfalama Kontrolleri */}
-      {totalPages > 1 && (
-        <div className="pagination no-print">
-          <button
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-          >
-            &laquo;&laquo;
-          </button>
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            &laquo; Geri
-          </button>
-          {paginationRange.map((number) => (
-            <button
-              key={number}
-              onClick={() => setCurrentPage(number)}
-              className={currentPage === number ? "active" : ""}
-            >
-              {number}
-            </button>
+          {personnelGroups.map((group) => (
+            <PersonnelAssignmentAccordion
+              key={group.personnelName}
+              group={group}
+              isExpanded={expandedUser === group.personnelName}
+              toggleExpansion={setExpandedUser}
+              onReject={handleReject}
+              onApprove={setSelectedUserForApproval} // Sadece modalı açmak için
+            />
           ))}
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            İleri &raquo;
-          </button>
-          <button
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-          >
-            &raquo;&raquo;
-          </button>
         </div>
       )}
 
-      {/* Onaylama Modalı */}
-      <Modal
+      <PendingAssignmentsPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setCurrentPage={setCurrentPage}
+      />
+
+      <ApproveAssignmentModal
         isOpen={!!selectedUserForApproval}
         onClose={() => setSelectedUserForApproval(null)}
-        title="Zimmeti Onayla"
-      >
-        {selectedUserForApproval && (
-          <div>
-            <p>
-              <strong>{selectedUserForApproval.personnelName}</strong>{" "}
-              personeline ait{" "}
-              <strong>{selectedUserForApproval.assignments.length} adet</strong>{" "}
-              zimmeti onaylamak için lütfen imzalı zimmet formunu yükleyin.
-            </p>
-            <div className="form-file-upload" style={{ margin: "1.5rem 0" }}>
-              <input
-                type="file"
-                id="approval-form-file"
-                onChange={(e) => setFormFile(e.target.files[0])}
-                style={{ display: "none" }}
-              />
-              <label htmlFor="approval-form-file" className="file-upload-label">
-                <FaUpload /> Form Seç
-              </label>
-              {formFile && <span>{formFile.name}</span>}
-            </div>
-            <div className="modal-actions">
-              <button
-                onClick={handleApprove}
-                disabled={!formFile || isApproving}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                {isApproving ? (
-                  <Loader size="sm" />
-                ) : (
-                  <>
-                    <FaCheck /> Onayla ve Zimmetle
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        selectedUserForApproval={selectedUserForApproval}
+        onApprove={handleApprove}
+        isApproving={isApproving}
+      />
 
-      {/* Reddetme Onay Modalı */}
-      <Modal
+      <ConfirmationModal
         isOpen={!!userToReject}
         onClose={() => setUserToReject(null)}
+        onConfirm={confirmRejectHandler}
+        confirmText="Evet, Reddet ve Sil"
+        confirmButtonVariant="danger"
         title="Zimmet Talebini Reddet"
       >
-        {userToReject && (
-          <div>
-            <p>
-              <strong>{userToReject.personnelName}</strong> personeline ait{" "}
-              <strong>{userToReject.assignments.length} adet</strong> zimmet
-              talebini reddetmek istediğinizden emin misiniz? Bu işlem, ilgili
-              tüm zimmet kayıtlarını kalıcı olarak silecektir.
-            </p>
-            <div
-              className="modal-actions"
-              style={{ justifyContent: "flex-end" }}
-            >
-              <button
-                onClick={() => setUserToReject(null)}
-                style={{ backgroundColor: "var(--secondary-color)" }}
-              >
-                İptal
-              </button>
-              <button onClick={confirmRejectHandler} className="danger">
-                <FaTrash
-                  style={{ marginRight: "0.5rem", verticalAlign: "middle" }}
-                />
-                Evet, Reddet ve Sil
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        <p>
+          <strong>{userToReject?.personnelName}</strong> personeline ait{" "}
+          <strong>{userToReject?.assignments.length} adet</strong> zimmet
+          talebini reddetmek istediğinizden emin misiniz? Bu işlem, ilgili tüm
+          zimmet kayıtlarını kalıcı olarak silecektir.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 };

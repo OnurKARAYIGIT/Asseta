@@ -301,6 +301,7 @@
   width: 0;
   opacity: 0;
   overflow: hidden;
+  border-radius: 20px; /* Kenarları yumuşatmak için input ile aynı değeri veriyoruz */
 }
 
 .search-container.active {
@@ -312,20 +313,34 @@
   width: 100%;
   padding: 8px 12px;
   border-radius: 20px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   background-color: rgba(255, 255, 255, 0.2);
-  color: var(--white-color);
+  color: var(--text-color);
   outline: none;
-  transition: background-color 0.2s;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
 .search-input::placeholder {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.search-container.active .search-input {
+  background-color: var(--white-color);
+  color: var(--text-color);
+}
+
+.search-container.active .search-input::placeholder {
+  color: var(--text-color-light);
+}
+
 .search-input:focus {
   background-color: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input:focus::placeholder {
+  color: transparent; /* Odaklandığında placeholder'ı gizle */
+  transition: color 0.2s ease-out;
 }
 
 .theme-toggle-btn {

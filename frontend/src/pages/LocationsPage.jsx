@@ -1,36 +1,50 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import { FaBuilding, FaPlus } from "react-icons/fa";
 import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
+import LocationsToolbar from "../components/locations/LocationsToolbar";
+import LocationsTable from "../components/locations/LocationsTable";
 
 const LocationsPage = () => {
-  const [locations, setLocations] = useState([]);
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   const { userInfo } = useAuth();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const { data } = await axiosInstance.get("/locations");
-        setLocations(data);
-      } catch (err) {
-        setError(
-          err.response && err.response.data.message
-            ? err.response.data.message
-            : err.message
-        );
-      }
-      setLoading(false);
-    };
+  // --- React Query ile Veri Çekme ---
+  const {
+    data: locations = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["locations"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/locations");
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // 5 dakika boyunca veriyi taze kabul et
+  });
 
-    fetchLocations();
-  }, [userInfo?.token]);
+  // --- React Query ile Veri Ekleme ---
+  const addLocationMutation = useMutation({
+    mutationFn: (newLocationName) =>
+      axiosInstance.post("/locations", { name: newLocationName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
+      setName("");
+      toast.success("Yeni konum başarıyla eklendi.");
+      setSubmitError("");
+    },
+    onError: (err) => {
+      setSubmitError(
+        err.response?.data?.message || "Konum eklenirken bir hata oluştu."
+      );
+    },
+  });
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -39,75 +53,24 @@ const LocationsPage = () => {
       setSubmitError("Konum adı boş olamaz.");
       return;
     }
-    try {
-      const { data } = await axiosInstance.post("/locations", { name });
-      setLocations([...locations, data]);
-      setName("");
-      toast.success("Yeni konum başarıyla eklendi.");
-    } catch (err) {
-      setSubmitError(
-        err.response && err.response.data.message
-          ? err.response.data.message
-          : err.message
-      );
-    }
+    addLocationMutation.mutate(name);
   };
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1>
-          <FaBuilding style={{ color: "var(--secondary-color)" }} /> Konum
-          Yönetimi
-        </h1>
-        {userInfo &&
-          (userInfo.role === "admin" || userInfo.role === "developer") && (
-            <div style={{ flex: 1, maxWidth: "400px" }}>
-              <form onSubmit={submitHandler} className="add-location-form">
-                <input
-                  type="text"
-                  placeholder="Yeni konum adı ekle..."
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                <button type="submit">
-                  <FaPlus /> Ekle
-                </button>
-              </form>
-              {submitError && (
-                <p style={{ color: "red", marginTop: "0.5rem" }}>
-                  {submitError}
-                </p>
-              )}
-            </div>
-          )}
-      </div>
-      {loading ? (
+      <LocationsToolbar
+        name={name}
+        setName={setName}
+        submitHandler={submitHandler}
+        submitError={submitError}
+        userInfo={userInfo}
+      />
+      {isLoading ? (
         <Loader />
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
+      ) : isError ? (
+        <p style={{ color: "red" }}>{error.message}</p>
       ) : (
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Konum Adı</th>
-                <th>Oluşturulma Tarihi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {locations.map((location) => (
-                <tr key={location._id}>
-                  <td>{location.name}</td>
-                  <td>
-                    {new Date(location.createdAt).toLocaleDateString("tr-TR")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <LocationsTable locations={locations} />
       )}
     </div>
   );

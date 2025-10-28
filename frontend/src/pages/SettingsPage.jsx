@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { history } from "../history.js";
-import {
-  FaCog,
-  FaSun,
-  FaMoon,
-  FaBell,
-  FaList,
-  FaLanguage,
-  FaKey,
-  FaColumns,
-  FaShieldAlt,
-  FaSave,
-} from "react-icons/fa";
-import { useTheme } from "../components/ThemeContext";
+import { FaCog, FaSave } from "react-icons/fa";
 import Modal from "../components/Modal";
 import { useSettings } from "../hooks/SettingsContext";
 import { toast } from "react-toastify";
 import "./SettingsPage.css";
+
+// Yeni oluşturduğumuz bileşenleri import edelim
+import NotificationSettings from "../components/settings/NotificationSettings";
+import DisplaySettings from "../components/settings/DisplaySettings";
+import ColumnManager from "../components/settings/ColumnManager";
+import AccountSecurity from "../components/settings/AccountSecurity";
 
 // Tüm olası sütunların listesi
 const allAssignmentColumns = [
@@ -42,7 +36,6 @@ const allAssignmentColumns = [
 ];
 
 const SettingsPage = () => {
-  const { theme, toggleTheme } = useTheme();
   const { settings, setSettings } = useSettings();
   // Ayarları düzenlemek için lokal bir state oluşturuyoruz.
   const [localSettings, setLocalSettings] = useState(settings);
@@ -128,126 +121,24 @@ const SettingsPage = () => {
         <FaCog style={{ color: "var(--secondary-color)" }} /> Ayarlar
       </h1>
 
-      <div className="settings-card">
-        <h2>Bildirim Tercihleri</h2>
-        <div className="setting-item">
-          <div className="setting-label">
-            <FaBell style={{ marginRight: "10px", color: "#3498db" }} />
-            Yeni zimmet atandığında e-posta ile bildir
-          </div>
-          <div className="setting-control">
-            <label className="theme-switch">
-              <input
-                name="emailOnNewAssignment"
-                type="checkbox"
-                onChange={handleSettingChange}
-                checked={localSettings.emailOnNewAssignment}
-              />
-              <span className="slider round"></span>
-            </label>
-          </div>
-        </div>
-        <div className="setting-item">
-          <div className="setting-label">
-            <FaBell style={{ marginRight: "10px", color: "#3498db" }} />
-            Zimmet durumu değiştiğinde e-posta ile bildir
-            <p className="setting-description">
-              Onay, ret veya iade durumlarında bildirim alırsınız.
-            </p>
-          </div>
-          <div className="setting-control">
-            <label className="theme-switch">
-              <input
-                name="emailOnStatusChange"
-                type="checkbox"
-                onChange={handleSettingChange}
-                checked={localSettings.emailOnStatusChange}
-              />
-              <span className="slider round"></span>
-            </label>
-          </div>
-        </div>
-      </div>
+      <NotificationSettings
+        settings={localSettings}
+        onSettingChange={handleSettingChange}
+      />
 
-      <div className="settings-card">
-        <h2>Veri Gösterimi</h2>
-        <div className="setting-item">
-          <div className="setting-label">
-            <FaList style={{ marginRight: "10px", color: "#2ecc71" }} />
-            Sayfa başına gösterilecek kayıt sayısı
-          </div>
-          <div className="setting-control">
-            <select
-              name="itemsPerPage"
-              value={localSettings.itemsPerPage}
-              onChange={handleSettingChange}
-            >
-              <option value={15}>15</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <DisplaySettings
+        settings={localSettings}
+        onSettingChange={handleSettingChange}
+      />
 
-      <div className="settings-card">
-        <h2>Tablo Görünümü Ayarları</h2>
-        <div className="setting-item column-manager">
-          <div className="setting-label">
-            <FaColumns style={{ marginRight: "10px", color: "#1abc9c" }} />
-            Zimmetler Tablosu Sütunları
-            <p className="setting-description">
-              Listeleme sayfasında varsayılan olarak görmek istediğiniz
-              sütunları seçin.
-            </p>
-          </div>
-          <div className="setting-control column-list">
-            {allAssignmentColumns.map((col) => (
-              <label key={col.key} className="column-checkbox">
-                <input
-                  type="checkbox"
-                  checked={localSettings.visibleColumns?.assignments.includes(
-                    col.key
-                  )}
-                  onChange={() => handleColumnChange(col.key)}
-                />
-                {col.name}
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ColumnManager
+        visibleColumns={localSettings.visibleColumns?.assignments || []}
+        allColumns={allAssignmentColumns}
+        onColumnChange={handleColumnChange}
+      />
 
-      <div className="settings-card">
-        <h2>Hesap ve Güvenlik</h2>
-        <div className="setting-item">
-          <div className="setting-label">
-            <FaKey style={{ marginRight: "10px", color: "#e67e22" }} />
-            Şifre Değiştir
-            <p className="setting-description">
-              Güvenliğiniz için şifrenizi periyodik olarak değiştirin.
-            </p>
-          </div>
-          <div className="setting-control">
-            <button className="secondary-button">Şifreyi Değiştir</button>
-          </div>
-        </div>
-        <div className="setting-item">
-          <div className="setting-label">
-            <FaShieldAlt style={{ marginRight: "10px", color: "#e74c3c" }} />
-            İki Faktörlü Kimlik Doğrulama (2FA)
-            <p className="setting-description">
-              Hesabınıza ekstra bir güvenlik katmanı ekleyin.
-            </p>
-          </div>
-          <div className="setting-control">
-            <button className="secondary-button" disabled>
-              Etkinleştir (Yakında)
-            </button>
-          </div>
-        </div>
-      </div>
+      <AccountSecurity onNavigateToProfile={() => history.push("/profile")} />
+
       <div className="save-settings-container">
         <button onClick={handleSave} className="save-button">
           <FaSave /> Ayarları Kaydet

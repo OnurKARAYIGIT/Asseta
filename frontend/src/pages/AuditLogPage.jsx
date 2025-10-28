@@ -1,53 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import {
-  FaHistory,
-  FaTimes,
-  FaFileExcel,
-  FaTrash,
-  FaPlusCircle,
-  FaEdit,
-  FaSignInAlt,
-  FaKey,
-  FaClock,
-} from "react-icons/fa";
+import { FaHistory } from "react-icons/fa";
 import "./AuditLogPage.css"; // Yeni CSS dosyasını import et
-import DatePicker, { registerLocale } from "react-datepicker";
+import { registerLocale } from "react-datepicker";
 import * as XLSX from "xlsx";
 import { tr } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import "./AssignmentsPage.css"; // Mevcut tablo ve filtre stillerini kullan
+import AuditLogToolbar from "../components/audit-log/AuditLogToolbar";
+import AuditLogTimeline from "../components/audit-log/AuditLogTimeline";
+import AuditLogPagination from "../components/audit-log/AuditLogPagination";
 
 registerLocale("tr", tr); // Türkçe yerelleştirmeyi kaydet
 
-const getActionIcon = (action) => {
-  if (action.includes("SİLİNDİ") || action.includes("REDDET")) {
-    return { icon: <FaTrash />, color: "var(--danger-color)" };
-  }
-  if (action.includes("OLUŞTURULDU") || action.includes("EKLENDİ")) {
-    return { icon: <FaPlusCircle />, color: "var(--success-color)" };
-  }
-  if (action.includes("GÜNCELLENDİ") || action.includes("ONAYLANDI")) {
-    return { icon: <FaEdit />, color: "var(--info-color)" };
-  }
-  if (action.includes("GİRİŞ")) {
-    return { icon: <FaSignInAlt />, color: "var(--primary-color)" };
-  }
-  if (action.includes("ŞİFRE")) {
-    return { icon: <FaKey />, color: "#e67e22" };
-  }
-  // Varsayılan ikon
-  return { icon: <FaHistory />, color: "var(--text-color-light)" };
-};
-
 const AuditLogPage = () => {
-  const [logs, setLogs] = useState([]);
-  const [groupedLogs, setGroupedLogs] = useState({});
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   // Filtreleme state'leri
   const [filters, setFilters] = useState({
     userId: "",
@@ -57,44 +25,38 @@ const AuditLogPage = () => {
 
   // Sayfalama state'leri
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    const fetchLogs = async () => {
-      setLoading(true);
-      try {
-        const params = {
-          ...filters,
-          page: currentPage,
-          limit: 15, // Sabit bir limit kullanalım
-        };
-        const { data } = await axiosInstance.get("/audit-logs", {
-          params,
-        });
-        setLogs(data.logs);
-        setGroupedLogs(groupLogsByDate(data.logs)); // Veriyi tarihe göre grupla
-        setTotalPages(data.pages);
-      } catch (err) {
-        setError("Denetim kayıtları getirilemedi.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // --- React Query ile Veri Çekme ---
 
-    fetchLogs();
-  }, [filters, currentPage]);
+  // 1. Denetim Kayıtları
+  const {
+    data: logsData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["auditLogs", { filters, currentPage }],
+    queryFn: async () => {
+      const params = { ...filters, page: currentPage, limit: 15 };
+      const { data } = await axiosInstance.get("/audit-logs", { params });
+      return data;
+    },
+    keepPreviousData: true,
+  });
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const { data } = await axiosInstance.get("/audit-logs/users");
-        setUsers(data);
-      } catch (err) {
-        console.error("Kullanıcılar getirilemedi:", err);
-      }
-    };
-    fetchUsers();
-  }, []);
+  // 2. Filtre için Kullanıcı Listesi
+  const { data: users = [] } = useQuery({
+    queryKey: ["auditLogUsers"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/audit-logs/users");
+      return data;
+    },
+    staleTime: 1000 * 60 * 10, // Kullanıcı listesi 10 dakika boyunca taze kabul edilsin
+  });
+
+  // React Query'den gelen verileri bileşenin kullanacağı değişkenlere ata
+  const logs = logsData?.logs || [];
+  const totalPages = logsData?.pages || 1;
 
   // Kayıtları tarihe göre gruplayan ve "Bugün", "Dün" gibi başlıklar ekleyen fonksiyon
   const groupLogsByDate = (logs) => {
@@ -130,6 +92,9 @@ const AuditLogPage = () => {
     }, {});
   };
 
+  // Veri değiştiğinde gruplamayı yeniden hesaplamak için useMemo kullan
+  const groupedLogs = useMemo(() => groupLogsByDate(logs), [logs]);
+
   const handleFilterChange = (e) => {
     setCurrentPage(1); // Filtre değiştiğinde ilk sayfaya dön
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -154,6 +119,12 @@ const AuditLogPage = () => {
   const isFilterActive = filters.userId || filters.startDate || filters.endDate;
 
   const handleExport = () => {
+    // Not: Bu export sadece mevcut sayfadaki verileri dışa aktarır.
+    // Tüm verileri aktarmak için ayrı bir API isteği gerekebilir.
+    // Şimdilik mevcut davranış korunmuştur.
+    if (logs.length === 0) {
+      return;
+    }
     const dataToExport = logs.map((log) => ({
       Kullanıcı: log.user?.username || "Sistem",
       İşlem: log.action.replace(/_/g, " "),
@@ -175,30 +146,6 @@ const AuditLogPage = () => {
     XLSX.writeFile(wb, "Denetim_Kayitlari.xlsx");
   };
 
-  // Sayfalama için gösterilecek sayfa aralığını hesaplayan fonksiyon
-  const getPaginationRange = () => {
-    const maxVisibleButtons = 5;
-    if (totalPages <= maxVisibleButtons) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-
-    let startPage = Math.max(
-      1,
-      currentPage - Math.floor(maxVisibleButtons / 2)
-    );
-    let endPage = startPage + maxVisibleButtons - 1;
-
-    if (endPage > totalPages) {
-      endPage = totalPages;
-      startPage = endPage - maxVisibleButtons + 1;
-    }
-
-    return Array.from(
-      { length: endPage - startPage + 1 },
-      (_, i) => startPage + i
-    );
-  };
-
   return (
     <div className="page-container">
       <h1>
@@ -206,143 +153,28 @@ const AuditLogPage = () => {
         Kayıtları
       </h1>
 
-      <div className="filter-toolbar">
-        <div className="toolbar-group">
-          <select
-            name="userId"
-            value={filters.userId}
-            onChange={handleFilterChange}
-          >
-            <option value="">Tüm Kullanıcılar</option>
-            {users.map((user) => (
-              <option key={user._id} value={user._id}>
-                {user.username}
-              </option>
-            ))}
-          </select>
-          <DatePicker
-            selectsRange={true}
-            startDate={filters.startDate ? new Date(filters.startDate) : null}
-            endDate={filters.endDate ? new Date(filters.endDate) : null}
-            onChange={handleDateChange}
-            isClearable={true}
-            placeholderText="Tarih aralığı seçin"
-            dateFormat="dd/MM/yyyy"
-            maxDate={new Date()} // Gelecekteki tarihlerin seçilmesini engelle
-            locale="tr" // Takvimi Türkçe yap
-            popperClassName="datepicker-popper" // Açılır panele özel sınıf
-            className="date-picker-input" // Gerekirse özel stil için
-          />
-          {isFilterActive && (
-            <button
-              onClick={clearFilters}
-              title="Filtreleri Temizle"
-              style={{ backgroundColor: "var(--secondary-color)" }}
-            >
-              <FaTimes />
-            </button>
-          )}
-        </div>
-        <div className="toolbar-group">
-          <button
-            onClick={handleExport}
-            style={{
-              backgroundColor: "#1D6F42",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <FaFileExcel />
-            Excel'e Aktar
-          </button>
-        </div>
-      </div>
+      <AuditLogToolbar
+        filters={filters}
+        users={users}
+        isFilterActive={isFilterActive}
+        handleFilterChange={handleFilterChange}
+        handleDateChange={handleDateChange}
+        clearFilters={clearFilters}
+        handleExport={handleExport}
+      />
 
-      {loading ? (
+      {isLoading ? (
         <Loader />
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
+      ) : isError ? (
+        <p style={{ color: "red" }}>{error.message}</p>
       ) : (
         <>
-          <div className="timeline-container">
-            {Object.keys(groupedLogs).length > 0 ? (
-              Object.keys(groupedLogs).map((date) => (
-                <div key={date} className="timeline-group">
-                  <h2 className="timeline-date-header">{date}</h2>
-                  <div className="timeline">
-                    {groupedLogs[date].map((log) => {
-                      const { icon, color } = getActionIcon(log.action);
-                      return (
-                        <div key={log._id} className="timeline-item">
-                          <div className="timeline-icon" style={{ color }}>
-                            {icon}
-                          </div>
-                          <div className="timeline-content">
-                            <div className="timeline-header">
-                              <span className="timeline-user">
-                                {log.user?.username || "Sistem"}
-                              </span>
-                              <span className="timeline-action-type">
-                                {log.action.replace(/_/g, " ")}
-                              </span>
-                              <span className="timeline-time">
-                                <FaClock />
-                                {new Date(log.createdAt).toLocaleTimeString(
-                                  "tr-TR",
-                                  { hour: "2-digit", minute: "2-digit" }
-                                )}
-                              </span>
-                            </div>
-                            <p className="timeline-details">{log.details}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p>Filtre kriterlerine uygun denetim kaydı bulunamadı.</p>
-            )}
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination no-print">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                &laquo;&laquo;
-              </button>
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                &laquo; Geri
-              </button>
-              {getPaginationRange().map((number) => (
-                <button
-                  key={number}
-                  onClick={() => setCurrentPage(number)}
-                  className={currentPage === number ? "active" : ""}
-                >
-                  {number}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                İleri &raquo;
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                &raquo;&raquo;
-              </button>
-            </div>
-          )}
+          <AuditLogTimeline groupedLogs={groupedLogs} />
+          <AuditLogPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+          />
         </>
       )}
     </div>

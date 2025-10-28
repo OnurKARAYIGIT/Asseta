@@ -1,25 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom"; // Bu hala gerekli
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import { FaBoxOpen, FaPlus, FaEdit, FaTrash, FaSave } from "react-icons/fa";
-import {
-  FaFileExcel,
-  FaCheckCircle,
-  FaTrashAlt,
-  FaTimesCircle,
-  FaHistory,
-  FaExclamationTriangle,
-  FaClock,
-} from "react-icons/fa";
+import { FaBoxOpen, FaPlus } from "react-icons/fa";
 import { useAuth } from "../components/AuthContext";
 import Modal from "../components/Modal";
+import ConfirmationModal from "../components/shared/ConfirmationModal"; // ConfirmationModal'ı import et
 import ItemForm from "../components/ItemForm"; // Yeni form bileşenini import et
 import { useSettings } from "../hooks/SettingsContext";
-import { useItems } from "../hooks/useItems"; // Oluşturduğumuz hook'u import et
 import { toast } from "react-toastify";
 import "./AssignmentsPage.css"; // Tablo stilleri için
 import * as XLSX from "xlsx";
+// Yeni oluşturduğumuz bileşenleri import edelim
+import ItemsToolbar from "../components/items/ItemsToolbar";
+import ItemsTable from "../components/items/ItemsTable";
+import ItemsPagination from "../components/items/ItemsPagination";
+import ItemHistoryModal from "../components/items/ItemHistoryModal"; // Yeni history modal'ı import et
 
 const assetTypesList = [
   "Masaüstü Bilgisayar",
@@ -50,25 +47,14 @@ const assetTypesList = [
 ];
 
 const ItemsPage = () => {
-  const {
-    items,
-    loading,
-    error,
-    currentPage,
-    setCurrentPage,
-    totalItems,
-    totalPages,
-    itemsPerPage,
-    setItemsPerPage,
-    statusFilter,
-    setStatusFilter,
-    assetTypeFilter,
-    setAssetTypeFilter,
-    searchTerm,
-    setSearchTerm,
-    refetchItems,
-  } = useItems();
+  // Filtreleme ve sayfalama için lokal state'ler
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [assetTypeFilter, setAssetTypeFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
 
+  // Modal state'leri
   const initialItemState = {
     name: "",
     assetType: "",
@@ -83,19 +69,69 @@ const ItemsPage = () => {
     description: "",
   };
 
+  // UI states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add"); // 'add' veya 'edit'
   const [currentItem, setCurrentItem] = useState(initialItemState);
   const [submitError, setSubmitError] = useState("");
-  // Eşya Geçmişi Modalı için state'ler
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
-  const [historyData, setHistoryData] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+
   const { settings } = useSettings();
+  const itemsPerPage = settings.itemsPerPage || 15;
   const { userInfo } = useAuth();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // Arama terimini gecikmeli olarak güncelle
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // --- React Query ile Veri Çekme ---
+  const {
+    data: itemsData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [
+      "items",
+      {
+        currentPage,
+        itemsPerPage,
+        statusFilter,
+        assetTypeFilter,
+        debouncedSearchTerm,
+      },
+    ],
+    queryFn: async () => {
+      const params = {
+        page: currentPage,
+        limit: itemsPerPage,
+        status: statusFilter,
+        assetType: assetTypeFilter,
+        keyword: debouncedSearchTerm,
+      };
+      const { data } = await axiosInstance.get("/items", { params });
+      return data;
+    },
+    keepPreviousData: true,
+  });
+
+  // React Query'den gelen verileri bileşenin kullanacağı değişkenlere ata
+  const items = itemsData?.items || [];
+  const totalItems = itemsData?.totalItems || 0;
+  const totalPages = itemsData?.pages || 1;
+
+  // --- React Query ile Veri Değiştirme (Mutations) ---
+  const invalidateItemsQuery = () => {
+    queryClient.invalidateQueries({ queryKey: ["items"] });
+  };
 
   // URL'deki filtre parametrelerini okuyup state'i güncelle
   useEffect(() => {
@@ -129,6 +165,28 @@ const ItemsPage = () => {
     setCurrentItem(initialItemState);
   };
 
+  const itemMutation = useMutation({
+    mutationFn: async ({ mode, data }) => {
+      if (mode === "add") {
+        return axiosInstance.post("/items", data);
+      } else {
+        return axiosInstance.put(`/items/${data._id}`, data);
+      }
+    },
+    onSuccess: (_, variables) => {
+      toast.success(
+        `Eşya başarıyla ${
+          variables.mode === "add" ? "eklendi" : "güncellendi"
+        }.`
+      );
+      invalidateItemsQuery();
+      handleCloseModal();
+    },
+    onError: (err) => {
+      setSubmitError(err.response?.data?.message || "Bir hata oluştu.");
+    },
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError("");
@@ -143,64 +201,35 @@ const ItemsPage = () => {
       return;
     }
 
-    try {
-      if (modalMode === "add") {
-        await axiosInstance.post("/items", currentItem);
-        toast.success("Eşya başarıyla eklendi.");
-      } else {
-        await axiosInstance.put(`/items/${currentItem._id}`, currentItem);
-        toast.success("Eşya başarıyla güncellendi.");
-      }
-      refetchItems();
-      handleCloseModal();
-    } catch (err) {
-      setSubmitError(
-        err.response && err.response.data.message
-          ? err.response.data.message
-          : err.message
-      );
-    }
+    itemMutation.mutate({ mode: modalMode, data: currentItem });
   };
 
   const handleHistoryClick = async (item) => {
     setSelectedItemForHistory(item);
-    setIsHistoryModalOpen(true);
-    setHistoryLoading(true);
-    try {
-      // Backend'e sadece bu eşyanın demirbaş numarasına göre tüm zimmetleri getirmesi için istek at
-      const { data } = await axiosInstance.get("/assignments", {
-        params: {
-          assetTag: item.assetTag, // Backend'in bu parametreyi işlemesi gerekiyor
-          limit: 1000, // Tüm geçmişi al
-          status: "all", // Beklemedekiler dahil tüm durumları getir
-        },
-      });
-      setHistoryData(data.assignments);
-    } catch (err) {
-      toast.error("Eşya geçmişi getirilirken bir hata oluştu.");
-    } finally {
-      setHistoryLoading(false);
-    }
   };
 
   const handleDeleteClick = (item) => {
     setItemToDelete(item);
   };
 
-  const confirmDeleteHandler = async () => {
-    if (!itemToDelete) return;
-    try {
-      await axiosInstance.delete(`/items/${itemToDelete._id}`);
-      refetchItems(); // Silme sonrası listeyi yeniden çek
-      setItemToDelete(null);
+  const deleteItemMutation = useMutation({
+    mutationFn: (itemId) => axiosInstance.delete(`/items/${itemId}`),
+    onSuccess: () => {
       toast.success("Eşya başarıyla silindi.");
-    } catch (err) {
+      invalidateItemsQuery();
+      setItemToDelete(null);
+    },
+    onError: (err) => {
       toast.error(
-        err.response && err.response.data.message
-          ? err.response.data.message
-          : "Eşya silinirken bir hata oluştu."
+        err.response?.data?.message || "Eşya silinirken bir hata oluştu."
       );
       setItemToDelete(null);
+    },
+  });
+
+  const confirmDeleteHandler = () => {
+    if (itemToDelete) {
+      deleteItemMutation.mutate(itemToDelete._id);
     }
   };
 
@@ -283,29 +312,6 @@ const ItemsPage = () => {
     return null; // Hata yok
   };
 
-  // Sayfalama için gösterilecek sayfa aralığını hesaplayan fonksiyon
-  const getPaginationRange = () => {
-    const maxVisibleButtons = 5;
-    if (totalPages <= maxVisibleButtons) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-
-    let startPage = Math.max(
-      1,
-      currentPage - Math.floor(maxVisibleButtons / 2)
-    );
-    let endPage = startPage + maxVisibleButtons - 1;
-
-    if (endPage > totalPages) {
-      endPage = totalPages;
-      startPage = endPage - maxVisibleButtons + 1;
-    }
-
-    return Array.from(
-      { length: endPage - startPage + 1 },
-      (_, i) => startPage + i
-    );
-  };
   return (
     <div className="page-container">
       <div className="page-header">
@@ -321,215 +327,40 @@ const ItemsPage = () => {
             </button>
           )}
       </div>
-      {loading ? (
+      {isLoading ? (
         <Loader />
       ) : error ? (
         <p style={{ color: "red" }}>{error}</p>
       ) : (
         <>
-          <div className="filter-toolbar no-print">
-            <div className="toolbar-group">
-              <div className="tab-buttons">
-                <button
-                  className={statusFilter === "" ? "active" : ""}
-                  onClick={() => setStatusFilter("")}
-                >
-                  Tümü
-                </button>
-                <button
-                  className={statusFilter === "assigned" ? "active" : ""}
-                  onClick={() => setStatusFilter("assigned")}
-                >
-                  Zimmetli
-                </button>
-                <button
-                  className={statusFilter === "arizali" ? "active" : ""}
-                  onClick={() => setStatusFilter("arizali")}
-                >
-                  Arızalı
-                </button>
-                <button
-                  className={statusFilter === "beklemede" ? "active" : ""}
-                  onClick={() => setStatusFilter("beklemede")}
-                >
-                  Beklemede
-                </button>
-                <button
-                  className={statusFilter === "unassigned" ? "active" : ""}
-                  onClick={() => setStatusFilter("unassigned")}
-                >
-                  Boşta
-                </button>
-                <button
-                  className={statusFilter === "hurda" ? "active" : ""}
-                  onClick={() => setStatusFilter("hurda")}
-                >
-                  Hurda
-                </button>
-              </div>
-            </div>
-            <div className="toolbar-group">
-              <select
-                value={assetTypeFilter}
-                onChange={(e) => setAssetTypeFilter(e.target.value)}
-              >
-                <option value="">Tüm Varlık Cinsleri</option>
-                {assetTypesList.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="toolbar-group">
-              <input
-                type="text"
-                placeholder="Eşya ara..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ minWidth: "250px" }}
-              />
-            </div>
-            <button
-              onClick={handleExport}
-              style={{ backgroundColor: "#1D6F42" }}
-            >
-              <FaFileExcel style={{ marginRight: "0.5rem" }} /> Excel'e Aktar
-            </button>
-          </div>
+          <ItemsToolbar
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            assetTypeFilter={assetTypeFilter}
+            setAssetTypeFilter={setAssetTypeFilter}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            handleExport={handleExport}
+            assetTypesList={assetTypesList}
+          />
           <div className="record-count-container">
             <span>
               Toplam <strong>{totalItems}</strong> kayıt bulundu.
             </span>
           </div>
-          <div className="table-container">
-            <h2>Mevcut Eşyalar</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Eşya Adı</th>
-                  <th>Varlık Cinsi</th>
-                  <th>Durum</th>
-                  <th>Marka</th>
-                  <th>Demirbaş No</th>
-                  <th>Seri No</th>
-                  <th>Açıklama</th>
-                  {(userInfo?.role === "admin" ||
-                    userInfo?.role === "developer") && <th>İşlemler</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item._id}>
-                    <td>{item.name}</td>
-                    <td>{item.assetType}</td>
-                    <td>
-                      <div>
-                        {(() => {
-                          switch (item.assignmentStatus) {
-                            case "Zimmetli":
-                              return (
-                                <span className="status-badge status-zimmetli">
-                                  <FaCheckCircle /> Zimmetli
-                                </span>
-                              );
-                            case "Arızalı":
-                              return (
-                                <span className="status-badge status-arizali">
-                                  <FaExclamationTriangle /> Arızalı
-                                </span>
-                              );
-                            case "Beklemede":
-                              return (
-                                <span className="status-badge status-beklemede">
-                                  <FaClock /> Beklemede
-                                </span>
-                              );
-                            case "Hurda":
-                              return (
-                                <span className="status-badge status-hurda">
-                                  <FaTrashAlt /> Hurda
-                                </span>
-                              );
-                            default: // Boşta
-                              return (
-                                <span className="status-badge status-unassigned">
-                                  <FaTimesCircle /> Boşta
-                                </span>
-                              );
-                          }
-                        })()}
-                      </div>
-                    </td>
-                    <td>{item.brand || "-"}</td>
-                    <td>{item.assetTag || "-"}</td>
-                    <td>{item.serialNumber || "-"}</td>
-                    <td>{item.description || "-"}</td>
-                    {userInfo &&
-                      (userInfo.role === "admin" ||
-                        userInfo.role === "developer") && (
-                        <td>
-                          <div style={{ display: "flex", gap: "0.5rem" }}>
-                            <button
-                              title="Düzenle"
-                              onClick={() => handleOpenModal("edit", item)}
-                              style={{ padding: "8px 12px" }}
-                            >
-                              <FaEdit />
-                            </button>
-                            <button
-                              title="Sil"
-                              onClick={() => handleDeleteClick(item)}
-                              style={{
-                                backgroundColor: "var(--danger-color)",
-                                padding: "8px 12px",
-                              }}
-                            >
-                              <FaTrash />
-                            </button>
-                            <button
-                              title="Geçmişi Görüntüle"
-                              onClick={() => handleHistoryClick(item)}
-                              style={{
-                                padding: "8px 12px",
-                                color: "var(--secondary-color)",
-                              }}
-                            >
-                              <FaHistory />
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination no-print">
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                &laquo; Geri
-              </button>
-              {getPaginationRange().map((number) => (
-                <button
-                  key={number}
-                  onClick={() => setCurrentPage(number)}
-                  className={currentPage === number ? "active" : ""}
-                >
-                  {number}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages || items.length === 0}
-              >
-                İleri &raquo;
-              </button>
-            </div>
-          )}
+          <ItemsTable
+            items={items}
+            userInfo={userInfo}
+            handleOpenModal={handleOpenModal}
+            handleDeleteClick={handleDeleteClick}
+            handleHistoryClick={handleHistoryClick}
+          />
+          <ItemsPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+            items={items}
+          />
         </>
       )}
       <Modal
@@ -547,86 +378,26 @@ const ItemsPage = () => {
           mode={modalMode}
         />
       </Modal>
-      {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmationModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
-        title="Eşyayı Sil"
+        onConfirm={confirmDeleteHandler}
+        confirmText="Evet, Sil"
+        confirmButtonVariant="danger"
+        title="Eşyayı Silme Onayı"
       >
         <p>
           <strong>{itemToDelete?.name}</strong> (Demirbaş No:{" "}
           {itemToDelete?.assetTag}) eşyasını kalıcı olarak silmek istediğinizden
           emin misiniz? Bu işlem geri alınamaz.
         </p>
-        <div className="modal-actions" style={{ justifyContent: "flex-end" }}>
-          <button
-            onClick={() => setItemToDelete(null)}
-            style={{ backgroundColor: "var(--secondary-color)" }}
-          >
-            İptal
-          </button>
-          <button
-            onClick={confirmDeleteHandler}
-            style={{ backgroundColor: "var(--danger-color)" }}
-          >
-            Evet, Sil
-          </button>
-        </div>
-      </Modal>
+      </ConfirmationModal>
 
-      {/* Eşya Geçmişi Modalı */}
-      <Modal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-        title={`${selectedItemForHistory?.name || "Eşya"} - Zimmet Geçmişi`}
-        size="large"
-      >
-        {historyLoading ? (
-          <Loader />
-        ) : (
-          <div className="table-container" style={{ maxHeight: "60vh" }}>
-            <table className="summary-item-history-table">
-              <thead>
-                <tr>
-                  <th>Personel</th>
-                  <th>Durum</th>
-                  <th>Zimmet Tarihi</th>
-                  <th>İade Tarihi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyData.length > 0 ? (
-                  historyData
-                    .sort(
-                      (a, b) =>
-                        new Date(b.assignmentDate) - new Date(a.assignmentDate)
-                    )
-                    .map((assign) => (
-                      <tr key={assign._id}>
-                        <td>{assign.personnelName}</td>
-                        <td>{assign.status}</td>
-                        <td>
-                          {new Date(assign.assignmentDate).toLocaleDateString()}
-                        </td>
-                        <td>
-                          {assign.returnDate
-                            ? new Date(assign.returnDate).toLocaleDateString()
-                            : "-"}
-                        </td>
-                      </tr>
-                    ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: "center" }}>
-                      Bu eşyaya ait zimmet geçmişi bulunamadı.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Modal>
+      <ItemHistoryModal
+        isOpen={!!selectedItemForHistory}
+        onClose={() => setSelectedItemForHistory(null)}
+        item={selectedItemForHistory}
+      />
     </div>
   );
 };

@@ -1,7 +1,17 @@
+/* PersonnelDetailsPage.css */
+
+.personnel-details-layout {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+/* Header Stilleri */
 .personnel-details-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start; /* Butonun yukarıda kalması için */
+  align-items: center; /* Butonun dikeyde ortalanması için */
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-color);
@@ -37,25 +47,29 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: transparent;
-  color: var(--text-color-light);
-  border: 1px solid transparent;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.1rem;
+  background-color: var(--background-color); /* Hafif bir arka plan */
+  color: var(--text-color); /* Standart metin rengi */
+  border: 1px solid var(--border-color); /* Standart kenarlık */
+  border-radius: 8px; /* Köşeleri yuvarla */
+  padding: 0.75rem 1.25rem; /* Yeterli boşluk sağla */
+  font-size: 1rem;
   transition: all 0.2s ease;
 }
 
+.back-button:hover {
+  background-color: var(--secondary-color);
+  filter: brightness(1.1); /* Hover efekti */
+}
+
+/* Profil Bilgileri Kartı */
 .profile-details-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
   background-color: var(--card-background-color);
-  padding: 1.5rem;
-  border-radius: 8px;
   border: 1px solid var(--border-color);
-  margin-bottom: 2rem;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+  margin-top: 2rem;
+  grid-column: span 12; /* Mobil için tam genişlik */
 }
 
 .profile-detail-item {
@@ -70,11 +84,19 @@
   color: var(--secondary-color);
 }
 
+.profile-details-card .section-subtitle {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+/* Sekme Navigasyonu */
 .tab-navigation {
   display: flex;
   gap: 0.5rem;
   border-bottom: 2px solid var(--border-color);
-  margin-bottom: 2rem;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+  grid-column: span 12; /* Mobil için tam genişlik */
 }
 
 .tab-button {
@@ -109,6 +131,15 @@
   border-radius: 10px;
   font-size: 0.75rem;
   border: 1px solid var(--border-color);
+}
+
+.tab-content {
+  width: 100%;
+  grid-column: span 12; /* Mobil için tam genişlik */
+}
+
+.assignments-section {
+  margin-bottom: 2rem;
 }
 
 .section-title {
@@ -409,4 +440,15 @@
 .change-value.empty {
   font-style: italic;
   color: var(--text-color-light);
+}
+
+@media (min-width: 1024px) {
+  .profile-details-card {
+    grid-column: span 4; /* Sol sütun */
+    margin-top: 0; /* Üst boşluğu sıfırla */
+  }
+
+  .assignments-container {
+    grid-column: span 8; /* Sağ sütun */
+  }
 }

@@ -8,120 +8,29 @@ const User = require("../models/userModel.js");
 // @route   GET /api/dashboard/stats
 // @access  Private
 const getDashboardStats = asyncHandler(async (req, res) => {
-  const totalItems = await Item.countDocuments({});
-  const totalUsers = await User.countDocuments({});
-  const totalLocations = await Location.countDocuments({});
-
   // Paralel olarak birden fazla sorgu çalıştır
   const [
-    statsResults,
-    monthlyAssignments,
-    itemDistribution,
+    // 1. Temel sayım istatistikleri
+    totalItems,
+    totalUsers,
+    totalLocations,
+    // 2. Son 5 zimmet
     recentAssignments,
+    // 3. Aylık zimmet dağılımı
+    monthlyAssignments,
+    // 4. Varlık türüne göre eşya dağılımı
+    itemDistribution,
+    // 5. Durum ve konuma göre eşya istatistikleri (Optimize edilmiş sorgu)
+    itemStats,
   ] = await Promise.all([
-    // --- PERFORMANS İYİLEŞTİRMESİ: Eşya bazlı istatistikler için tek bir sorgu ---
-    Item.aggregate([
-      // 1. Her eşyaya ait zimmet kayıtlarını getir
-      {
-        $lookup: {
-          from: "assignments", // "assignments" koleksiyonuna katıl
-          localField: "_id", // Item._id
-          foreignField: "item", // Assignment.item
-          as: "assignments", // Tüm zimmetleri al
-        },
-      },
-      {
-        $addFields: {
-          lastAssignment: {
-            $arrayElemAt: [
-              {
-                $sortArray: {
-                  input: "$assignments",
-                  sortBy: { createdAt: -1 },
-                },
-              },
-              0,
-            ],
-          },
-          // Eşyanın aktif bir zimmeti olup olmadığını kontrol et
-          hasActiveAssignment: {
-            $anyElementTrue: {
-              $map: {
-                input: "$assignments",
-                as: "assign",
-                in: {
-                  $in: [
-                    "$$assign.status",
-                    ["Zimmetli", "Arızalı", "Beklemede"],
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
-      // 3. Eşyanın nihai durumunu ve konumunu belirle
-      {
-        $project: {
-          _id: 1,
-          assetType: 1,
-          // Bir eşyanın nihai durumu, aktif zimmetlerinin durumuna göre belirlenir.
-          status: {
-            $cond: {
-              if: "$hasActiveAssignment",
-              then: {
-                // Eğer aktif bir zimmet varsa, durumu "Zimmetli" olarak ayarla.
-                // Not: Daha karmaşık senaryolar için (örn: aynı anda hem Arızalı hem Zimmetli),
-                // buradaki mantık daha da geliştirilebilir. Şimdilik öncelik Zimmetli'de.
-                $cond: {
-                  if: { $in: ["Zimmetli", "$assignments.status"] },
-                  then: "Zimmetli",
-                  else: "$lastAssignment.status",
-                },
-              },
-              else: "Boşta",
-            },
-          },
-          locationId: { $ifNull: ["$lastAssignment.company", null] },
-        },
-      },
-      // 4. Tüm istatistikleri tek seferde hesaplamak için $facet kullan
-      {
-        $facet: {
-          // a. Eşya durumlarına göre dağılım
-          itemsByStatus: [{ $group: { _id: "$status", count: { $sum: 1 } } }],
-
-          // b. Aktif zimmetli eşya sayısı
-          totalActiveAssignments: [
-            { $match: { status: "Zimmetli" } },
-            { $count: "count" },
-          ],
-
-          // c. Konuma göre zimmetli eşya sayısı
-          itemsByLocation: [
-            { $match: { status: "Zimmetli" } }, // Sadece zimmetli olanları say
-            {
-              $lookup: {
-                from: "locations",
-                localField: "locationId",
-                foreignField: "_id",
-                as: "locationDetails",
-              },
-            },
-            { $unwind: "$locationDetails" },
-            // Frontend'de tıklama işlevi için locationId'yi de ekleyelim
-            {
-              $group: {
-                _id: { name: "$locationDetails.name", id: "$locationId" },
-                count: { $sum: 1 },
-              },
-            },
-            { $sort: { count: -1 } },
-          ],
-        },
-      },
-    ]),
-    // Son 12 aydaki zimmet sayısı (Bu sorgu Assignment modeline ait olduğu için ayrı kalmalı)
+    Item.countDocuments({}),
+    User.countDocuments({}),
+    Location.countDocuments({}),
+    Assignment.find({})
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("item", "name brand")
+      .populate("company", "name"),
     Assignment.aggregate([
       {
         $group: {
@@ -135,39 +44,93 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       { $sort: { "_id.year": -1, "_id.month": -1 } },
       { $limit: 12 },
     ]),
-    // Varlık türüne göre eşya dağılımı (Bu sorgu diğerlerinden bağımsız)
     Item.aggregate([
       { $group: { _id: "$assetType", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 5 }, // En popüler 5 türü göster
+      { $limit: 5 },
     ]),
-    // Son 5 zimmet (Bu sorgu Assignment modeline ait olduğu için ayrı kalmalı)
-    Assignment.find({})
-      .sort({ createdAt: -1 })
-      .limit(5) // Son 5 zimmeti getir
-      .populate("item", "name brand")
-      .populate("company", "name"),
+    // --- PERFORMANS İYİLEŞTİRMESİ: Zimmetlerden başlayarak tek bir sorgu ---
+    Assignment.aggregate([
+      // 1. En son zimmet kaydını bulmak için sırala ve grupla
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: "$item", // Her bir eşya için tek bir kayıt al
+          lastStatus: { $first: "$status" },
+          lastLocationId: { $first: "$company" },
+        },
+      },
+      // 2. İstatistikleri hesaplamak için $facet kullan
+      {
+        $facet: {
+          // a. Zimmetli eşya sayısı ve konuma göre dağılım
+          activeAssignments: [
+            { $match: { lastStatus: "Zimmetli" } },
+            {
+              $group: {
+                _id: "$lastLocationId",
+                count: { $sum: 1 },
+              },
+            },
+            {
+              $lookup: {
+                from: "locations",
+                localField: "_id",
+                foreignField: "_id",
+                as: "locationDetails",
+              },
+            },
+            { $unwind: "$locationDetails" },
+            {
+              $project: {
+                _id: { name: "$locationDetails.name", id: "$_id" },
+                count: 1,
+              },
+            },
+          ],
+          // b. Duruma göre zimmetli eşya dağılımı
+          itemsByStatus: [
+            { $group: { _id: "$lastStatus", count: { $sum: 1 } } },
+          ],
+        },
+      },
+    ]),
   ]);
 
-  // İstatistik sonuçlarını ayrıştır
-  const {
-    totalActiveAssignments: totalActiveArr = [],
-    itemsByStatus = [],
-    itemsByLocation = [],
-  } = statsResults[0] || {};
+  // Optimize edilmiş sorgudan gelen sonuçları işle
+  const stats = itemStats[0];
+  const activeAssignmentsData = stats.activeAssignments || [];
+  const assignedItemsByStatus = stats.itemsByStatus || [];
 
-  const totalActiveAssignments = totalActiveArr[0]?.count || 0;
+  // Toplam aktif zimmet sayısını hesapla
+  const totalActiveAssignments = activeAssignmentsData.reduce(
+    (sum, loc) => sum + loc.count,
+    0
+  );
+
+  // "Boşta" olan eşya sayısını hesapla
+  const totalAssignedItems = assignedItemsByStatus.reduce(
+    (sum, status) => sum + status.count,
+    0
+  );
+  const unassignedItemsCount = totalItems - totalAssignedItems;
+
+  // "Boşta" durumunu istatistiklere ekle
+  const itemsByStatus = [...assignedItemsByStatus];
+  if (unassignedItemsCount > 0) {
+    itemsByStatus.push({ _id: "Boşta", count: unassignedItemsCount });
+  }
 
   res.json({
     totalAssignments: totalActiveAssignments,
     totalItems,
     totalUsers,
     totalLocations,
-    itemsByStatus,
     monthlyAssignments,
     itemDistribution,
     recentAssignments,
-    itemsByLocation,
+    itemsByStatus, // "Boşta" sayısını içeren güncel liste
+    itemsByLocation: activeAssignmentsData, // Konuma göre dağılım
   });
 });
 

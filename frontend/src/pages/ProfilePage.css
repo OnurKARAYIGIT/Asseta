@@ -18,16 +18,36 @@
 
 @media (min-width: 1024px) {
   .profile-info-card {
-    grid-column: span 4;
+    grid-column: span 3; /* Sol sütun: 3/12 genişlik */
   }
   .profile-assignments-card {
-    grid-column: span 8;
+    grid-column: span 5; /* Orta sütun: 5/12 genişlik */
   }
   .profile-history-card {
-    grid-column: span 12;
+    grid-column: span 4; /* Sağ sütun: 4/12 genişlik */
   }
 }
 
 .profile-card h2 {
   margin-top: 0;
+}
+
+/* ProfileInfoCard ikon renkleri */
+.profile-icon.email {
+  color: #007bff;
+}
+.profile-icon.phone {
+  color: #28a745;
+}
+.profile-icon.position {
+  color: #6f42c1;
+}
+.profile-icon.role {
+  color: var(--primary-color);
+}
+.profile-icon.last-login {
+  color: var(--secondary-color);
+}
+.profile-icon.last-action {
+  color: var(--danger-color);
 }
