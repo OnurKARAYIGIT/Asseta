@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import "./PendingAssignmentsPage.css";
-import "./AssignmentsPage.css"; // Pagination stilleri için gerekli
+import "../components/assignments/AssignmentsPage.css"; // Pagination stilleri için gerekli
 import { toast } from "react-toastify";
 import { useAuth } from "../components/AuthContext";
 import { usePendingCount } from "../contexts/PendingCountContext";
@@ -137,14 +136,14 @@ const PendingAssignmentsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
       <PendingAssignmentsHeader />
       {isLoading ? (
         <Loader />
       ) : error ? (
-        <p style={{ color: "red" }}>{error.message}</p>
+        <p className="text-red-500">{error.message}</p>
       ) : (
-        <div className="accordion-container">
+        <div className="space-y-4">
           {personnelGroups.map((group) => (
             <PersonnelAssignmentAccordion
               key={group.personnelName}

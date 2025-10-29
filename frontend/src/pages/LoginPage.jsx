@@ -1,35 +1,61 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
 import Loader from "../components/Loader";
 import { FaUser, FaLock } from "react-icons/fa";
-import logoAsseta from "/src/assets/logo.svg";
+import logoAsseta from "../assets/logo.svg";
 import "./LoginPage.css";
+import axiosInstance from "../api/axiosInstance";
+import { history } from "../history";
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const { userInfo, login, loading, error } = useAuth();
-  const navigate = useNavigate();
+  const { userInfo, loginSuccess } = useAuth();
+  const location = useLocation();
+
+  // React Hook Form kurulumu
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  // React Query ile login mutation'ı
+  const { mutate: login, isLoading } = useMutation({
+    mutationFn: ({ username, password }) =>
+      axiosInstance.post(
+        "/users/login",
+        { username, password },
+        { withCredentials: true } // <-- Cookie’lerin tarayıcıya kaydedilmesini sağlar
+      ),
+    onSuccess: (response) => {
+      // Eğer backend, kullanıcı bilgilerini response.body içinde döndürüyorsa
+      // AuthContext'i güncelle ve yönlendir
+      response.data.token = document.cookie.split(";")[0].split("=")[1];
+      loginSuccess(response.data);
+      toast.success("Giriş başarılı!");
+    },
+    onError: (err) => {
+      const message =
+        err.response?.data?.message || "Giriş sırasında bir hata oluştu.";
+      toast.error(message);
+    },
+  });
 
   // Eğer kullanıcı zaten giriş yapmışsa, onu doğrudan dashboard'a yönlendir.
   // Bu, /login sayfasına tekrar erişmeye çalıştığında /no-access'e gitmesini engeller.
   useEffect(() => {
-    if (userInfo) {
-      // toast.info("Zaten giriş yaptınız. Ana panele yönlendiriliyorsunuz.");
-      navigate("/dashboard");
+    // Sadece kullanıcı /login sayfasındaysa ve giriş yapmışsa yönlendirme yap.
+    if (userInfo && location.pathname === "/login") {
+      history.push("/dashboard");
     }
-  }, [userInfo, navigate]);
+  }, [userInfo, location.pathname]);
 
-  const submitHandler = (e) => {
-    e.preventDefault();
-    if (!username || !password) {
-      toast.error("Lütfen tüm alanları doldurun.");
-      return;
-    }
-    // Sadece login fonksiyonunu çağır. Yönlendirme useEffect ile yapılacak.
-    login(username, password);
+  // Form gönderimini ele alan fonksiyon
+  const onSubmit = (data) => {
+    login(data);
   };
 
   return (
@@ -44,8 +70,7 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <form onSubmit={submitHandler} className="login-form">
-          {error && <div className="error-message">{error}</div>}
+        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
           <div className="form-group">
             <label htmlFor="username">Kullanıcı Adı</label>
             <div className="input-wrapper">
@@ -53,11 +78,15 @@ const LoginPage = () => {
               <input
                 type="text"
                 id="username"
+                {...register("username", {
+                  required: "Kullanıcı adı zorunludur.",
+                })}
                 placeholder="Kullanıcı adınızı girin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
+            {errors.username && (
+              <p className="error-message">{errors.username.message}</p>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="password">Şifre</label>
@@ -66,14 +95,20 @@ const LoginPage = () => {
               <input
                 type="password"
                 id="password"
+                {...register("password", { required: "Şifre zorunludur." })}
                 placeholder="Şifrenizi girin"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {errors.password && (
+              <p className="error-message">{errors.password.message}</p>
+            )}
           </div>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? <Loader size="sm" /> : "Giriş Yap"}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader size="sm" /> : "Giriş Yap"}
           </button>
         </form>
       </div>

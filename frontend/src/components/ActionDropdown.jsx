@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaEllipsisH } from "react-icons/fa"; // Yatay üç nokta daha modern durur
-import "./ActionDropdown.css";
+import { FaEllipsisH } from "react-icons/fa";
 
 const ActionDropdown = ({ actions, toggleComponent }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +25,7 @@ const ActionDropdown = ({ actions, toggleComponent }) => {
   };
 
   return (
-    <div className="action-dropdown" ref={dropdownRef}>
+    <div className="relative flex" ref={dropdownRef}>
       <div
         onClick={(e) => {
           e.stopPropagation();
@@ -34,25 +33,43 @@ const ActionDropdown = ({ actions, toggleComponent }) => {
         }}
       >
         {toggleComponent || (
-          <button className="dropdown-toggle">
+          <button className="p-2 rounded-full flex items-center justify-center text-inherit hover:bg-light-gray">
             <FaEllipsisH />
           </button>
         )}
       </div>
 
       {isOpen && (
-        <div className="dropdown-menu">
-          {actions.map((action, index) => (
-            <button
-              key={index}
-              onClick={() => handleActionClick(action)}
-              disabled={action.disabled}
-              className={`dropdown-item ${action.className || ""}`}
-            >
-              <span className="icon">{action.icon}</span>
-              <span>{action.label}</span>
-            </button>
-          ))}
+        <div className="absolute right-0 top-[calc(100%+5px)] bg-card-background border border-border rounded-lg z-[100] min-w-[180px] py-2">
+          {actions.map((action, index) => {
+            const iconColorClass =
+              {
+                edit: "text-primary",
+                permissions: "text-secondary",
+                password: "text-text-light",
+                delete: "text-danger",
+                "theme-toggle": "text-[#f39c12]",
+                secondary: "text-text-light",
+              }[action.className] || "";
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleActionClick(action)}
+                disabled={action.disabled}
+                className={`flex items-center gap-3 w-full px-4 py-3 bg-transparent border-none text-left cursor-pointer text-text-main text-[0.9rem] leading-normal hover:bg-background disabled:text-text-light disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                  action.className || ""
+                }`}
+              >
+                <span
+                  className={`inline-flex items-center justify-center w-5 text-base ${iconColorClass}`}
+                >
+                  {action.icon}
+                </span>
+                <span>{action.label}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

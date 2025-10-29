@@ -22,31 +22,19 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
-import logoAsseta from "/src/assets/logo.svg";
-import "./Navbar.css";
+import logoAsseta from "../assets/logo.svg";
 
 const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
-  const { userInfo } = useAuth();
+  const { userInfo, hasPermission } = useAuth(); // hasPermission fonksiyonunu AuthContext'ten al
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const searchInputRef = useRef(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const searchContainerRef = useRef(null);
   const { pendingCount } = usePendingCount();
-
-  // Bir linkin gösterilip gösterilmeyeceğini kontrol eden yardımcı fonksiyon
-  const hasPermission = (requiredPermission) => {
-    if (!userInfo) return false;
-    // Admin ve Developer her zaman yetkilidir
-    if (userInfo.role === "admin" || userInfo.role === "developer") {
-      return true;
-    }
-    // 'user' rolü için özel yetkileri kontrol et
-    return userInfo.permissions?.includes(requiredPermission);
-  };
 
   // Saati her saniye güncelle
   useEffect(() => {
@@ -57,6 +45,19 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Sayfa kaydırıldığında Navbar'ın arkaplanını değiştirmek için
+  useEffect(() => {
+    const handleScroll = () => {
+      // 10px'den fazla kaydırıldıysa state'i güncelle
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    // Component kaldırıldığında event listener'ı temizle
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const navItems = [
     {
       to: "/assignments",
@@ -65,6 +66,13 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       icon: <FaClipboardList />,
       permission: "zimmetler",
       children: [
+        {
+          to: "/assignments",
+          label: "Tüm Zimmetler",
+          className: "nav-assignments",
+          icon: <FaClipboardList />,
+          permission: "zimmetler",
+        },
         {
           to: "/pending-assignments",
           label: "Bekleyenler",
@@ -99,6 +107,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       to: "/item-report",
       label: "Eşya Raporu",
       className: "nav-item-report",
+      // Bu className için ikon rengi aşağıda tanımlanacak
       icon: <FaChartBar />,
       permission: "item-report",
     },
@@ -109,6 +118,13 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       icon: <FaUsersCog />,
       permission: "admin",
       children: [
+        {
+          to: "/admin",
+          label: "Kullanıcı Yönetimi",
+          className: "nav-admin",
+          icon: <FaUsersCog />,
+          permission: "admin",
+        },
         {
           to: "/audit-logs",
           label: "Denetim Kayıtları",
@@ -154,64 +170,125 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     performSearch();
   };
 
+  // Menü elemanlarını render etmek için iç içe (recursive) fonksiyon
+  const renderNavItems = (items) => {
+    return items
+      .filter((item) => hasPermission(item.permission))
+      .map((item, index) => {
+        // İkon renklerini Tailwind sınıflarına çevirelim
+        const iconColorClass =
+          {
+            "nav-assignments": "text-yellow-400",
+            "nav-report": "text-teal-400",
+            "nav-admin": "text-pink-300",
+            "nav-pending": "text-orange-500",
+            "nav-items": "text-green-500",
+            "nav-item-report": "text-blue-400", // Eşya Raporu için renk eklendi
+            "nav-locations": "text-purple-500",
+            "nav-audit": "text-pink-500",
+          }[item.className] || "text-current";
+
+        const commonClasses =
+          "flex items-center gap-2 px-4 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors";
+
+        // Kaydırma durumuna göre metin gölgesi ekle
+        const textShadowClass = isScrolled
+          ? "text-shadow-md" // Bu özel sınıfı index.css'e ekleyeceğiz
+          : "";
+
+        return (
+          <li
+            key={index}
+            className={`relative group ${
+              isScrolled
+                ? "rounded-lg backdrop-blur-3xl shadow-lg  border-white bg-slate-400 bg-opacity-35"
+                : ""
+            } `}
+          >
+            <NavLink
+              className={({ isActive }) =>
+                `${commonClasses} ${textShadowClass} ${
+                  isActive ? "!text-white shadow-sm shadow-gray-600" : ""
+                }`
+              }
+            >
+              <span className={iconColorClass}>{item.icon}</span>
+              <span className="text-white">{item.label}</span>
+              {item.children && (
+                <FaChevronDown
+                  className={`ml-1 text-xs transition-transform group-hover:rotate-180 ${textShadowClass}`}
+                />
+              )}
+              {item.to === "/pending-assignments" && pendingCount > 0 && (
+                <span className="ml-auto text-xs font-bold bg-danger text-white rounded-full px-2 py-0.5 animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
+            </NavLink>
+            {item.children && (
+              <ul className="absolute top-full left-0 mt-2 min-w-[220px] bg-card-background/80 backdrop-blur-md shadow-lg rounded-b-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border border-white/10">
+                {renderNavItems(item.children)}
+              </ul>
+            )}
+          </li>
+        );
+      });
+  };
+
   return (
-    <nav className="navbar">
-      <div className="navbar-left">
-        <Link to={userInfo ? "/dashboard" : "/"} className="nav-logo-link">
-          <img src={logoAsseta} alt="Asseta Logo" className="nav-logo" />
+    <nav
+      className={`sticky top-0 z-[1000] flex items-center justify-between px-6 py-2 transition-all duration-300 ${
+        isScrolled
+          ? " rounded-b-lg backdrop-blur-3xl shadow-lg border-white bg-slate-400 bg-opacity-35"
+          : "bg-transparent border-transparent shadow-none"
+      }`}
+    >
+      <div className="flex items-center gap-6">
+        <Link to="/">
+          <img
+            src={logoAsseta}
+            alt="Asseta Logo"
+            className="h-[70px] w-[105px]"
+          />
         </Link>
-        <ul className="nav-links">
-          {navItems
-            .filter((item) => hasPermission(item.permission))
-            .map((item, index) => (
-              <li key={index} className={`nav-item ${item.className || ""}`}>
-                <NavLink to={item.to}>
-                  {item.icon} {item.label}
-                  {item.children && (
-                    <FaChevronDown className="dropdown-arrow" />
-                  )}
-                </NavLink>
-                {item.children && (
-                  <ul className="dropdown-menu">
-                    {item.children
-                      .filter((child) => hasPermission(child.permission))
-                      .map((child, childIndex) => (
-                        <li
-                          key={childIndex}
-                          className={`nav-item ${child.className || ""}`}
-                        >
-                          <NavLink to={child.to}>
-                            {child.icon} {child.label}
-                            {child.to === "/pending-assignments" &&
-                              pendingCount > 0 && (
-                                <span className="badge">{pendingCount}</span>
-                              )}
-                          </NavLink>
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </li>
-            ))}
+        <ul className="hidden md:flex items-center gap-1">
+          {renderNavItems(navItems)}
         </ul>
       </div>
 
-      <div className="navbar-right">
-        {userInfo && <NotificationDropdown />}
-        <div className="datetime-container">
-          <div className="datetime-text">
-            <div className="datetime-line">
-              <FaClock className="datetime-icon" />
-              <span className="time">
+      <div
+        className={`flex items-center gap-6 ${
+          isScrolled
+            ? " rounded-lg backdrop-blur-3xl shadow-lg  border-white bg-slate-400 bg-opacity-35"
+            : "bg-transparent  border-transparent shadow-none"
+        }`}
+      >
+        {userInfo && (
+          // NotificationDropdown bileşeninin içindeki stillerin Tailwind'e çevrilmesi gerekebilir.
+          <NotificationDropdown className="flex-shrink-0" />
+        )}
+        <div className="hidden lg:flex items-center gap-3   rounded-lg px-4 py-2 text-white select-none">
+          <div className="flex flex-col items-start text-sm leading-tight">
+            <div
+              className={`flex items-center gap-2 transition-all ${
+                isScrolled ? "text-shadow-md" : ""
+              }`}
+            >
+              <FaClock className="opacity-80" />
+              <span className="font-semibold">
                 {currentDateTime.toLocaleTimeString("tr-TR", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </span>
             </div>
-            <div className="datetime-line">
-              <FaRegCalendarAlt className="datetime-icon small" />
-              <span className="date">
+            <div
+              className={`flex items-center gap-2 text-xs opacity-90 transition-all ${
+                isScrolled ? "text-shadow-md" : ""
+              }`}
+            >
+              <FaRegCalendarAlt />
+              <span>
                 {`${currentDateTime.toLocaleDateString("tr-TR", {
                   day: "2-digit",
                   month: "2-digit",
@@ -223,15 +300,17 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
             </div>
           </div>
         </div>
-        <div className="nav-actions" ref={searchContainerRef}>
+        <div className="flex items-center gap-1" ref={searchContainerRef}>
           <div
-            className={`search-container ${isSearchVisible ? "active" : ""}`}
+            className={`transition-all duration-300 ease-in-out ${
+              isSearchVisible ? "w-56 opacity-100" : "w-0 opacity-0"
+            }`}
           >
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
-                className="search-input"
-                placeholder="  Sayfada Ara"
+                className="w-full px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-white placeholder:text-white/70 focus:bg-white focus:text-text-main focus:placeholder:text-text-light outline-none"
+                placeholder="Sayfada Ara..."
                 value={globalSearchTerm}
                 onChange={(e) => setGlobalSearchTerm(e.target.value)}
                 ref={searchInputRef}
@@ -239,27 +318,41 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
             </form>
           </div>
           <button
-            className="nav-action-btn"
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-white transition-all hover:bg-white/10 ${
+              isScrolled ? "text-shadow-md" : ""
+            }`}
             onClick={() => setIsSearchVisible((prev) => !prev)}
+            aria-label="Aramayı aç/kapat"
           >
             <FaSearch />
           </button>
           <button
-            className="nav-action-btn theme-toggle-btn"
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-secondary transition-all hover:bg-white/10 ${
+              isScrolled ? "text-shadow-md" : ""
+            }`}
             onClick={toggleTheme}
+            aria-label="Temayı değiştir"
           >
             {theme === "dark" ? <FaSun /> : <FaMoon />}
           </button>
         </div>
         {userInfo ? (
+          // UserMenu bileşeninin içindeki stillerin Tailwind'e çevrilmesi gerekebilir.
+          // Özellikle metin renkleri ve açılır menü konumlandırması kontrol edilmeli.
           <UserMenu
+            className="flex-shrink-0"
             inactivityTime={inactivityTime}
             isTimeoutWarning={isTimeoutWarning}
           />
         ) : (
-          <ul className="nav-links">
-            <li className="nav-item">
-              <NavLink to="/login">
+          <ul className="flex items-center gap-2">
+            <li>
+              <NavLink
+                to="/login"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-all ${
+                  isScrolled ? "text-shadow-md" : ""
+                }`}
+              >
                 <FaSignInAlt /> Giriş Yap
               </NavLink>
             </li>

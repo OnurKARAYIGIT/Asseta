@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
-import "./AssignmentsPage.css"; // Mevcut tablo stillerini kullanıyoruz
-import "./PersonnelReportPage.css";
 import Loader from "../components/Loader";
 import { FaFileAlt } from "react-icons/fa"; // Sadece sayfanın kendi kullandığı ikonlar kaldı
 import { useNavigate, useLocation } from "react-router-dom";
@@ -12,6 +10,7 @@ import PersonnelChoices from "../components/personnel-report/PersonnelChoices";
 import PersonnelSummaryCard from "../components/personnel-report/PersonnelSummaryCard";
 import PersonnelReportDetailModal from "../components/personnel-report/PersonnelReportDetailModal";
 import ConfirmationModal from "../components/shared/ConfirmationModal";
+import { toast } from "react-toastify";
 
 const PersonnelReportPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,11 +136,11 @@ const PersonnelReportPage = () => {
   }, [isModalOpen]);
 
   return (
-    <div className="page-container">
-      <div className="page-header no-print">
-        <h1>
-          <FaFileAlt style={{ color: "var(--secondary-color)" }} /> Personel
-          Zimmet Raporu
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
+      <div className="flex items-center gap-4 mb-6 print:hidden">
+        <FaFileAlt className="text-secondary text-2xl" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
+          Personel Zimmet Raporu
         </h1>
       </div>
       <PersonnelSearchToolbar

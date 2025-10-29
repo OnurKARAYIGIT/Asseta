@@ -51,6 +51,10 @@ const userSchema = new mongoose.Schema(
     lastSeen: {
       type: Date,
     },
+    settings: {
+      type: Object,
+      default: {}, // Varsayılan olarak boş bir obje
+    },
   },
   { timestamps: true } // createdAt ve updatedAt alanlarını otomatik ekler
 );

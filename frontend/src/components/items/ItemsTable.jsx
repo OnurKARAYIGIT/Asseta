@@ -1,131 +1,134 @@
 import React from "react";
-import {
-  FaEdit,
-  FaTrash,
-  FaHistory,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaClock,
-  FaTrashAlt,
-  FaTimesCircle,
-} from "react-icons/fa";
-
-const StatusBadge = ({ status }) => {
-  switch (status) {
-    case "Zimmetli":
-      return (
-        <span className="status-badge status-zimmetli">
-          <FaCheckCircle /> Zimmetli
-        </span>
-      );
-    case "Arızalı":
-      return (
-        <span className="status-badge status-arizali">
-          <FaExclamationTriangle /> Arızalı
-        </span>
-      );
-    case "Beklemede":
-      return (
-        <span className="status-badge status-beklemede">
-          <FaClock /> Beklemede
-        </span>
-      );
-    case "Hurda":
-      return (
-        <span className="status-badge status-hurda">
-          <FaTrashAlt /> Hurda
-        </span>
-      );
-    default: // Boşta
-      return (
-        <span className="status-badge status-unassigned">
-          <FaTimesCircle /> Boşta
-        </span>
-      );
-  }
-};
-
+import { FaEdit, FaTrash, FaHistory } from "react-icons/fa";
+import { useAuth } from "../AuthContext";
+import Button from "../shared/Button";
 const ItemsTable = ({
   items,
-  userInfo,
   handleOpenModal,
   handleDeleteClick,
   handleHistoryClick,
 }) => {
+  const { hasPermission } = useAuth();
+
   return (
-    <div className="table-container">
-      <h2>Mevcut Eşyalar</h2>
-      <table>
-        <thead>
+    <div className="overflow-x-auto bg-card-background rounded-lg shadow border border-border">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-light-gray">
           <tr>
-            <th>Eşya Adı</th>
-            <th>Varlık Cinsi</th>
-            <th>Durum</th>
-            <th>Marka</th>
-            <th>Demirbaş No</th>
-            <th>Seri No</th>
-            <th>Açıklama</th>
-            {(userInfo?.role === "admin" || userInfo?.role === "developer") && (
-              <th>İşlemler</th>
-            )}
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              Eşya Adı
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              Varlık Cinsi
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              Demirbaş No
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              Seri No
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              Durum
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider">
+              İşlemler
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item._id}>
-              <td>{item.name}</td>
-              <td>{item.assetType}</td>
-              <td>
-                <StatusBadge status={item.assignmentStatus} />
-              </td>
-              <td>{item.brand || "-"}</td>
-              <td>{item.assetTag || "-"}</td>
-              <td>{item.serialNumber || "-"}</td>
-              <td>{item.description || "-"}</td>
-              {userInfo &&
-                (userInfo.role === "admin" ||
-                  userInfo.role === "developer") && (
-                  <td>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button
-                        title="Düzenle"
+        <tbody className="divide-y divide-border">
+          {items.map((item) => {
+            // Güvenli erişim için item objesini kontrol edelim
+            if (!item) return null;
+            return (
+              <tr
+                key={item._id}
+                className="hover:bg-background transition-colors"
+              >
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-main">
+                  {item.name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light">
+                  {item.assetType}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light">
+                  {item.assetTag}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light">
+                  {item.serialNumber}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                      ${
+                        item.assignmentStatus === "Zimmetli"
+                          ? "bg-blue-100 text-blue-800"
+                          : ""
+                      }
+                      ${
+                        item.assignmentStatus === "Boşta"
+                          ? "bg-gray-100 text-gray-800"
+                          : ""
+                      }
+                      ${
+                        item.assignmentStatus === "Arızalı"
+                          ? "bg-red-100 text-red-800"
+                          : ""
+                      }
+                      ${
+                        item.assignmentStatus === "Beklemede"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : ""
+                      }
+                      ${
+                        item.assignmentStatus === "Hurda"
+                          ? "bg-gray-700 text-gray-100"
+                          : ""
+                      }
+                      ${
+                        item.assignmentStatus === "İade Edildi"
+                          ? "bg-green-100 text-green-800"
+                          : ""
+                      }`}
+                  >
+                    {item.assignmentStatus}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  {hasPermission("items") && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         onClick={() => handleOpenModal("edit", item)}
-                        style={{ padding: "8px 12px" }}
+                        title="Düzenle"
                       >
-                        {" "}
-                        <FaEdit />{" "}
-                      </button>
-                      <button
-                        title="Sil"
-                        onClick={() => handleDeleteClick(item)}
-                        style={{
-                          backgroundColor: "var(--danger-color)",
-                          padding: "8px 12px",
-                        }}
-                      >
-                        {" "}
-                        <FaTrash />{" "}
-                      </button>
-                      <button
-                        title="Geçmişi Görüntüle"
+                        <FaEdit />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         onClick={() => handleHistoryClick(item)}
-                        style={{
-                          padding: "8px 12px",
-                          color: "var(--secondary-color)",
-                        }}
+                        title="Geçmişi Görüntüle"
                       >
-                        {" "}
-                        <FaHistory />{" "}
-                      </button>
+                        <FaHistory />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDeleteClick(item)}
+                        title="Sil"
+                      >
+                        <FaTrash />
+                      </Button>
                     </div>
-                  </td>
-                )}
-            </tr>
-          ))}
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 };
-
 export default ItemsTable;

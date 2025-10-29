@@ -1,14 +1,24 @@
-/* === DEĞİŞKENLER VE GENEL AYARLAR === */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Metin okunabilirliği için özel gölge sınıfı */
+@layer utilities {
+  .text-shadow-md {
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.7);
+  }
+}
+
 :root {
-  --primary-color: #001f3f; /* Kurumsal Koyu Lacivert */
-  --primary-hover-color: #003366; /* Lacivert Hover */
-  --secondary-color: #17a2b8; /* Vurgu Rengi - Turkuaz */
+  --primary-color: #17a2b8; /* Yeni Ana Renk - Turkuaz */
+  --primary-hover-color: #1caab7; /* Turkuaz Hover */
+  --secondary-color: #ffc107; /* Yeni Vurgu Rengi - Altın Sarısı */
   --white-color: #ffffff;
   --danger-color: #dc3545; /* Standart Kırmızı */
 
   /* Açık Tema Renkleri */
-  --background-color: #f8f9fa;
-  --card-background-color: #ffffff;
+  --background-color: #f8f9fa; /* Hafif kırık beyaz */
+  --card-background-color: #ffffff; /* Kartlar saf beyaz kalabilir veya #fcfcfc yapılabilir */
   --text-color: #212529;
   --text-color-light: #6c757d;
   --border-color: #dee2e6;
@@ -18,76 +28,38 @@
 
 body.dark {
   --background-color: #0d1117; /* GitHub Koyu Mod Arka Planı */
-  --card-background-color: #161b22; /* GitHub Koyu Mod Kart Arka Planı */
-  --text-color: #c9d1d9; /* GitHub Koyu Mod Ana Metin Rengi */
+  --card-background-color: #161b22; /* Kart Arka Planı */
+  --text-color: #e6edf3; /* Daha parlak metin rengi */
   --text-color-light: #8b949e; /* GitHub Koyu Mod İkincil Metin Rengi */
   --border-color: #30363d; /* GitHub Koyu Mod Kenarlık Rengi */
   --light-gray-color: #21262d; /* Hover vb. için */
   --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Genel Reset ve Temel Ayarlar */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--background-color);
+  background: linear-gradient(-45deg, #001f3f, #1e3a5f, #17a2b8, #0d1117);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
   color: var(--text-color);
-  /* Arka Plan Fotoğrafı */
-  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-    url("/background.jpg");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  font-family: "Inter", sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .main-content {
   padding: 2rem;
-}
-
-.page-container {
-  background-color: var(--card-background-color);
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: var(--box-shadow);
-}
-
-/* Genel Başlık Stili */
-h1,
-h2 {
-  color: var(--text-color);
-  margin-bottom: 1.5rem;
-  font-weight: 600;
-}
-
-h1 {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* Form Elemanları */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="tel"],
-textarea,
-select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  background-color: var(--card-background-color);
-  color: var(--text-color);
-  font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.2);
+  background-color: transparent; /* Arka planı şeffaf yap */
 }
 
 /* React Datepicker için özel stil */
@@ -95,68 +67,9 @@ select:focus {
   width: 100%; /* Diğer inputlarla aynı genişlikte olmasını sağla */
 }
 
-/* Butonlar */
-button {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: var(--primary-color);
-  color: var(--white-color);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-button:hover {
-  background-color: var(--primary-hover-color);
-}
-
-button:disabled {
-  background-color: #6c757d; /* Gri tonu */
-  cursor: not-allowed;
-}
-
-/* Loader Animasyonu */
-.loader-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3rem;
-}
-
-.loader-spinner {
-  border: 5px solid var(--light-gray-color);
-  border-top: 5px solid var(--primary-color);
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Tablo Stilleri için küçük bir iyileştirme */
-tbody tr:last-of-type {
-  border-bottom: 2px solid var(--primary-color);
-}
-
 /* === YAZDIRMA STİLLERİ === */
 @media print {
   /* Yazdırılmayacak elemanları gizle */
-  .no-print,
-  .navbar,
-  .user-menu,
-  .nav-actions {
-    display: none !important;
-  }
 
   /* Ana layout'u sıfırla */
   body {

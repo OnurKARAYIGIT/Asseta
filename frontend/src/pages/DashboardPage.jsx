@@ -5,6 +5,7 @@ import { useAuth } from "../components/AuthContext";
 import Loader from "../components/Loader";
 import StatCard from "../components/StatCard";
 import RecentActivity from "../components/RecentActivity";
+import ExampleModal from "../components/examples/ExampleModal";
 
 // Yeni, özelleşmiş grafik bileşenlerini import et
 import ItemDistributionChart from "../components/ItemDistributionChart";
@@ -64,10 +65,17 @@ const DashboardPage = () => {
   });
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Ana Panel</h1>
-        <p>Hoş Geldin, {userInfo?.username}!</p>
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
+          Ana Panel
+        </h1>
+        <p className="text-base text-text-light">
+          Hoş Geldin,{" "}
+          <span className="font-semibold text-text-main">
+            {userInfo?.username}!
+          </span>
+        </p>
       </div>
 
       {isLoading ? (
@@ -77,7 +85,7 @@ const DashboardPage = () => {
       ) : (
         stats && (
           <>
-            <div className="dashboard-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
                 className="total-assignments-card"
                 icon={<FaClipboardList />}
@@ -108,7 +116,7 @@ const DashboardPage = () => {
               />
             </div>
 
-            <div className="charts-grid">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               <ItemDistributionChart data={stats.itemDistribution} />
               <MonthlyAssignmentsChart data={stats.monthlyAssignments} />
               <StatusDistributionChart data={stats.itemsByStatus} />

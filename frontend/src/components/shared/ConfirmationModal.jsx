@@ -1,5 +1,6 @@
 import React from "react";
 import Modal from "../Modal";
+import Button from "./Button";
 
 const ConfirmationModal = ({
   isOpen,
@@ -11,19 +12,24 @@ const ConfirmationModal = ({
   confirmButtonVariant = "danger", // 'danger' veya 'primary' olabilir
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <div>{children}</div>
-      <div className="modal-actions" style={{ justifyContent: "flex-end" }}>
-        <button
-          onClick={onClose}
-          style={{ backgroundColor: "var(--secondary-color)" }}
-        >
-          İptal
-        </button>
-        <button onClick={onConfirm} className={confirmButtonVariant}>
-          {confirmText}
-        </button>
-      </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      variant="confirmation"
+      preventClose
+      footer={
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onClose}>
+            İptal
+          </Button>
+          <Button variant={confirmButtonVariant} onClick={onConfirm}>
+            {confirmText}
+          </Button>
+        </div>
+      }
+    >
+      <div className="text-text-main">{children}</div>
     </Modal>
   );
 };

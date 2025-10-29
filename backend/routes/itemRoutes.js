@@ -6,13 +6,18 @@ const {
   updateItem,
   deleteItem,
   checkUniqueness,
-} = require("../controllers/itemController");
+} = require("../controllers/itemController.js");
 const { protect, adminOrDeveloper } = require("../middleware/authMiddleware");
 
 router
   .route("/")
   .get(protect, getItems)
   .post(protect, adminOrDeveloper, createItem);
+
+// Excel dışa aktarma rotası
+const { exportItems } = require("../controllers/itemController.js");
+router.route("/export").get(protect, exportItems);
+
 router.route("/check-unique").post(protect, adminOrDeveloper, checkUniqueness);
 
 router

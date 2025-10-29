@@ -1,11 +1,7 @@
 import React from "react";
+import Button from "../shared/Button";
 
-const AssignmentsPagination = ({
-  currentPage,
-  totalPages,
-  setCurrentPage,
-  assignments,
-}) => {
+const AssignmentsPagination = ({ currentPage, totalPages, setCurrentPage }) => {
   const getPaginationRange = () => {
     const maxVisibleButtons = 5;
     if (totalPages <= maxVisibleButtons) {
@@ -20,7 +16,7 @@ const AssignmentsPagination = ({
 
     if (endPage > totalPages) {
       endPage = totalPages;
-      startPage = endPage - maxVisibleButtons + 1;
+      startPage = Math.max(1, endPage - maxVisibleButtons + 1);
     }
 
     return Array.from(
@@ -32,37 +28,49 @@ const AssignmentsPagination = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="pagination no-print">
-      <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+    <div className="flex justify-center items-center gap-2 mt-6 print:hidden">
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => setCurrentPage(1)}
+        disabled={currentPage === 1}
+      >
         &laquo;&laquo;
-      </button>
-      <button
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
         onClick={() => setCurrentPage(currentPage - 1)}
         disabled={currentPage === 1}
       >
         &laquo; Geri
-      </button>
+      </Button>
       {getPaginationRange().map((number) => (
-        <button
+        <Button
           key={number}
+          size="sm"
+          variant={currentPage === number ? "primary" : "secondary"}
           onClick={() => setCurrentPage(number)}
-          className={currentPage === number ? "active" : ""}
         >
           {number}
-        </button>
+        </Button>
       ))}
-      <button
+      <Button
+        size="sm"
+        variant="secondary"
         onClick={() => setCurrentPage(currentPage + 1)}
-        disabled={currentPage === totalPages || assignments.length === 0}
+        disabled={currentPage === totalPages}
       >
         İleri &raquo;
-      </button>
-      <button
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
         onClick={() => setCurrentPage(totalPages)}
-        disabled={currentPage === totalPages || assignments.length === 0}
+        disabled={currentPage === totalPages}
       >
         &raquo;&raquo;
-      </button>
+      </Button>
     </div>
   );
 };

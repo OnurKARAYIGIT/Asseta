@@ -1,6 +1,9 @@
-const express = require("express");
 const path = require("path");
+// .env dosyasındaki değişkenleri process.env'e yükle
 const dotenv = require("dotenv");
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+const express = require("express");
+const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const connectDB = require("./config/db.js");
 
@@ -15,13 +18,11 @@ const auditLogRoutes = require("./routes/auditLogRoutes.js");
 const dashboardRoutes = require("./routes/dashboardRoutes.js");
 const searchRoutes = require("./routes/searchRoutes.js");
 
-// Ortam değişkenlerini yükle
-dotenv.config({ path: path.resolve(__dirname, "./.env") });
-
 const app = express();
 
 // Gelen isteklerdeki JSON verilerini ayrıştırmak için middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Farklı domainlerden gelen isteklere izin vermek için CORS'u etkinleştir
 app.use(cors());
@@ -39,6 +40,25 @@ app.use("/api/search", searchRoutes);
 
 // Yüklenen dosyaları dışarıya açmak için uploads klasörünü statik yap
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// --- HATA YÖNETİMİ MIDDLEWARE'LERİ ---
+
+// 404 Not Found Handler (Eşleşmeyen Rotalar İçin)
+app.use((req, res, next) => {
+  const error = new Error(`Bulunamadı - ${req.originalUrl}`);
+  res.status(404);
+  next(error);
+});
+
+// Genel Hata Yakalayıcı (Tüm Hatalar İçin)
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode);
+  res.json({
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 

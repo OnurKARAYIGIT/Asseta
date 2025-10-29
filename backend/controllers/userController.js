@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
+const jwt = require("jsonwebtoken"); // Bu satırı ekleyin
 const generateToken = require("../utils/generateToken.js");
 const Assignment = require("../models/assignmentModel");
 const logAction = require("../utils/auditLogger");
@@ -49,11 +50,41 @@ const registerUser = asyncHandler(async (req, res) => {
       position: user.position,
       role: user.role,
       permissions: user.permissions,
-      token: generateToken(user._id),
+      accessToken: generateToken(user._id, "15m"), // Kısa ömürlü access token
+      refreshToken: generateToken(user._id, "7d"), // Uzun ömürlü refresh token
     });
   } else {
     res.status(400);
     throw new Error("Geçersiz kullanıcı verisi.");
+  }
+});
+
+// @desc    Kullanıcı token'larını yeniler
+// @route   POST /api/users/refresh-token
+// @access  Public (via Refresh Token)
+const refreshToken = asyncHandler(async (req, res) => {
+  // Hem cookie'den hem de body'den gelen token'ı kontrol et
+  const refreshToken = req.cookies.refreshToken || req.body.token;
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Refresh token bulunamadı." });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const newAccessToken = generateToken(decoded.id, "15m");
+
+    // Yeni access token'ı hem cookie'ye yaz hem de response olarak dön
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.status(200).json({ accessToken: newAccessToken });
+  } catch (error) {
+    res.status(401);
+    throw new Error("Geçersiz refresh token.");
   }
 });
 
@@ -77,6 +108,20 @@ const loginUser = asyncHandler(async (req, res) => {
       `'${user.username}' kullanıcısı sisteme giriş yaptı.`
     );
 
+    // Token'ları httpOnly cookie olarak ayarla
+    res.cookie("accessToken", generateToken(user._id, "15m"), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+    res.cookie("refreshToken", generateToken(user._id, "7d"), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     res.json({
       _id: user._id,
       username: user.username,
@@ -85,12 +130,25 @@ const loginUser = asyncHandler(async (req, res) => {
       position: user.position,
       role: user.role,
       permissions: user.permissions,
-      token: generateToken(user._id),
+      // Token'ları localStorage için de gönder
+      accessToken: generateToken(user._id, "15m"),
+      refreshToken: generateToken(user._id, "7d"),
     });
   } else {
     res.status(401); // Unauthorized
     throw new Error("Geçersiz kullanıcı adı veya şifre.");
   }
+});
+
+// @desc    Kullanıcı çıkışı yapar ve cookie'leri temizler
+// @route   POST /api/users/logout
+// @access  Public
+const logoutUser = asyncHandler(async (req, res) => {
+  // Cookie'leri temizle
+  res.cookie("accessToken", "", { httpOnly: true, expires: new Date(0) });
+  res.cookie("refreshToken", "", { httpOnly: true, expires: new Date(0) });
+
+  res.status(200).json({ message: "Çıkış başarılı." });
 });
 
 // @desc    Kullanıcı profilini ve zimmetlerini getirir
@@ -153,6 +211,37 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   } else {
     res.status(401);
     throw new Error("Mevcut şifre yanlış.");
+  }
+});
+
+// @desc    Get user settings
+// @route   GET /api/users/settings
+// @access  Private
+const getUserSettings = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select("settings");
+  if (user) {
+    // Eğer kullanıcının ayarları henüz yoksa, varsayılan ayarları döndür
+    res.json(user.settings || {});
+  } else {
+    res.status(404);
+    throw new Error("Kullanıcı bulunamadı.");
+  }
+});
+
+// @desc    Update user settings
+// @route   PUT /api/users/settings
+// @access  Private
+const updateUserSettings = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.settings = req.body;
+    await user.save();
+    // Loglama eklenebilir
+    res.json(user.settings);
+  } else {
+    res.status(404);
+    throw new Error("Kullanıcı bulunamadı.");
   }
 });
 
@@ -289,7 +378,9 @@ const getUserProfileByName = asyncHandler(async (req, res) => {
 
 module.exports = {
   registerUser,
+  refreshToken,
   loginUser,
+  logoutUser,
   getUserProfile,
   updateUserPassword,
   getAllUsers,
@@ -297,4 +388,6 @@ module.exports = {
   updateUserByAdmin,
   resetUserPassword,
   getUserProfileByName,
+  getUserSettings,
+  updateUserSettings,
 };

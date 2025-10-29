@@ -1,313 +1,35 @@
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.page-header h2 {
-  margin: 0;
-}
-
-.modal-form .form-group {
-  margin-bottom: 1.5rem;
-}
-
-.modal-form .form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-/* Kullanıcı tablosunu daha ferah hale getir */
-.table-container td,
-.table-container th {
-  padding: 1rem 0.75rem; /* Dikey boşluğu daha makul bir seviyeye indir */
-  vertical-align: middle; /* İçeriği dikeyde ortala */
-}
-
-.modal-form .form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.modal-form .form-group {
+.admin-panel-page {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Konteynerin tam yüksekliği kaplamasını sağla */
+  min-height: 100vh;
+  padding: 2rem;
+  /* === LoginPage'den Gelen Arka Plan === */
+  background: linear-gradient(-45deg, #001f3f, #1e3a5f, #17a2b8, #0d1117);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
 }
 
-.modal-form .form-group.full-width {
-  grid-column: 1 / -1;
+/* LoginPage'deki animasyonu tekrar kullanıyoruz */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-.modal-form label {
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-color-light);
-}
-
-.input-with-icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-with-icon svg {
-  position: absolute;
-  left: 12px;
-  color: var(--text-color-light);
-  opacity: 0.7;
-}
-
-.input-with-icon input {
-  padding: 12px 12px 12px 40px; /* Tüm padding değerlerini burada tanımla */
-}
-
-/* Tüm form elemanlarının aynı yüksekliğe sahip olmasını sağla */
-.modal-form .form-group input,
-.modal-form .form-group select {
-  flex-grow: 1;
-}
-
-.modal-form .form-group select {
-  padding: 12px; /* Diğer inputlarla aynı padding'i ver */
-  appearance: none; /* Tarayıcının varsayılan okunu kaldır */
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 16px 12px;
-}
-
-.modal-form .modal-actions {
-  display: flex; /* Flexbox'ı burada da tanımla */
-  justify-content: flex-end; /* Butonları sağa hizala */
-}
-
-.modal-actions .primary {
-  background-color: var(--primary-color);
-  display: inline-flex; /* İkon ve metni hizalamak için */
-  align-items: center;
-  gap: 0.5rem; /* İkon ve metin arasına boşluk ekle */
-}
-
-.table-container tbody tr {
-  transition: background-color 0.2s ease-in-out;
-}
-
-/* Zebra deseni ve hover efekti ekleyerek okunabilirliği artır */
-.table-container tbody tr:nth-child(even) {
-  background-color: var(--light-gray-color);
-}
-.table-container tbody tr:hover {
-  background-color: var(--primary-focus-color);
-}
-
-/* İşlemler menüsünün tablo dışına taşmasını ve kaydırmayı tetiklemesini engelle */
-.table-container td:last-child {
-  position: relative;
-  overflow: visible;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.status-indicator .online-dot {
-  width: 10px;
-  height: 10px;
-  background-color: #28a745; /* Yeşil */
-  border-radius: 50%;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: var(
-    --secondary-color
-  ); /* Koyu temada okunabilirlik için renk değiştirildi */
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-  font-size: inherit;
-  font-family: inherit;
-}
-.link-button:hover {
-  filter: brightness(0.9); /* Hover efekti için rengi biraz koyulaştır */
-}
-
-/* Durum Rozeti Stilleri */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.75rem;
+.admin-panel-container {
+  /* === LoginPage'deki Cam Efekti === */
+  background-color: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem;
   border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-badge.online {
-  background-color: rgba(40, 167, 69, 0.15);
-  color: #218838;
-}
-
-.status-badge.offline {
-  background-color: rgba(108, 117, 125, 0.15);
-  color: #5a6268;
-}
-
-.status-badge .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: currentColor; /* Yazı rengini alır */
-}
-
-.admin-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.user-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
-}
-
-.user-card {
-  background-color: var(--card-background-color);
+  box-shadow: var(--box-shadow-lg);
+  width: 100%;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  border-left: 4px solid transparent; /* Vurgu kenarlığı için başlangıç durumu */
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.2s ease, box-shadow 0.2s ease,
-    border-left-color 0.3s ease;
-}
-
-.user-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--box-shadow-lg); /* Daha belirgin bir gölge */
-}
-
-/* Rol tabanlı vurgu renkleri */
-.user-card.role-developer:hover {
-  border-left-color: #6f42c1; /* Developer için mor */
-}
-
-.user-card.role-admin:hover {
-  border-left-color: var(--primary-color); /* Admin için ana tema rengi */
-}
-
-.user-card.role-user:hover {
-  border-left-color: var(--secondary-color); /* User için ikincil tema rengi */
-}
-
-.user-card-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.user-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: var(--primary-focus-color);
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 600;
-  border: 2px solid var(--primary-focus-color); /* Avatar için çerçeve */
-  flex-shrink: 0;
-}
-
-.user-info {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-color);
-}
-
-.user-actions {
-  position: relative;
-}
-
-.user-card-body {
-  padding: 1.5rem;
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.user-detail-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  color: var(--text-color-light);
-}
-
-.user-detail-item svg {
-  color: var(--secondary-color);
-}
-
-.user-card-footer {
-  padding: 0.75rem 1.5rem;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--background-color);
-  border-radius: 0 0 12px 12px;
-}
-
-/* Rol Rozeti Stilleri */
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-top: 0.25rem;
-}
-
-.role-badge svg {
-  font-size: 0.9rem;
-}
-
-.role-badge-developer {
-  background-color: rgba(111, 66, 193, 0.15); /* Mor tonu */
-  color: #6f42c1;
-}
-
-.role-badge-admin {
-  background-color: var(--primary-focus-color);
-  color: var(--primary-color);
-}
-
-.role-badge-user {
-  background-color: var(--light-gray-color);
-  color: var(--text-color-light);
+  color: var(--text-color); /* Koyu tema metin rengini uygula */
 }

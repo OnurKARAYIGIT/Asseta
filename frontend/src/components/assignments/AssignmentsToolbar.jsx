@@ -1,5 +1,6 @@
 import React from "react";
 import { FaPlus, FaFileExcel } from "react-icons/fa";
+import Button from "../shared/Button"; // Button bileşenini import ediyoruz
 
 const AssignmentsToolbar = ({
   searchTerm,
@@ -11,18 +12,19 @@ const AssignmentsToolbar = ({
   onAddNew,
 }) => {
   return (
-    <div className="filter-toolbar no-print">
-      <div className="toolbar-group">
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 print:hidden">
+      <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
         <input
           type="text"
           placeholder="Ara (Personel, Eşya, Seri No...)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ minWidth: "250px" }}
+          className="w-full sm:w-64 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         />
         <select
           value={filterLocation}
           onChange={(e) => setFilterLocation(e.target.value)}
+          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         >
           <option value="">Tüm Konumlar</option>
           {companies.map((company) => (
@@ -32,13 +34,22 @@ const AssignmentsToolbar = ({
           ))}
         </select>
       </div>
-      <div className="toolbar-group">
-        <button onClick={onAddNew}>
-          <FaPlus /> Yeni Zimmet Ekle
-        </button>
-        <button onClick={handleExport} style={{ backgroundColor: "#1D6F42" }}>
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <Button
+          onClick={onAddNew}
+          variant="primary"
+          className="w-full sm:w-auto flex items-center justify-center gap-2"
+        >
+          <FaPlus />
+          <span>Yeni Zimmet Ekle</span>
+        </Button>
+        <Button
+          variant="excel"
+          onClick={handleExport}
+          className="w-full sm:w-auto flex items-center justify-center gap-2"
+        >
           <FaFileExcel /> Excele Aktar
-        </button>
+        </Button>
       </div>
     </div>
   );

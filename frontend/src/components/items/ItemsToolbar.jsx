@@ -1,5 +1,4 @@
-import React from "react";
-import { FaFileExcel } from "react-icons/fa";
+import React, { useState } from "react";
 
 const ItemsToolbar = ({
   statusFilter,
@@ -8,55 +7,43 @@ const ItemsToolbar = ({
   setAssetTypeFilter,
   searchTerm,
   setSearchTerm,
-  handleExport,
   assetTypesList,
 }) => {
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  const statusButtons = [
+    { label: "Tümü", value: "" },
+    { label: "Zimmetli", value: "assigned" },
+    { label: "Arızalı", value: "arizali" },
+    { label: "Beklemede", value: "beklemede" },
+    { label: "Boşta", value: "unassigned" },
+    { label: "Hurda", value: "hurda" },
+  ];
+
   return (
-    <div className="filter-toolbar no-print">
-      <div className="toolbar-group">
-        <div className="tab-buttons">
+    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+      {/* Durum Filtre Butonları */}
+      <div className="flex-shrink-0 bg-light-gray p-1 rounded-lg flex items-center gap-1">
+        {statusButtons.map((btn) => (
           <button
-            className={statusFilter === "" ? "active" : ""}
-            onClick={() => setStatusFilter("")}
+            key={btn.value}
+            onClick={() => setStatusFilter(btn.value)}
+            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+              statusFilter === btn.value
+                ? "bg-white text-primary shadow"
+                : "text-text-light hover:text-text-main"
+            }`}
           >
-            Tümü
+            {btn.label}
           </button>
-          <button
-            className={statusFilter === "assigned" ? "active" : ""}
-            onClick={() => setStatusFilter("assigned")}
-          >
-            Zimmetli
-          </button>
-          <button
-            className={statusFilter === "arizali" ? "active" : ""}
-            onClick={() => setStatusFilter("arizali")}
-          >
-            Arızalı
-          </button>
-          <button
-            className={statusFilter === "beklemede" ? "active" : ""}
-            onClick={() => setStatusFilter("beklemede")}
-          >
-            Beklemede
-          </button>
-          <button
-            className={statusFilter === "unassigned" ? "active" : ""}
-            onClick={() => setStatusFilter("unassigned")}
-          >
-            Boşta
-          </button>
-          <button
-            className={statusFilter === "hurda" ? "active" : ""}
-            onClick={() => setStatusFilter("hurda")}
-          >
-            Hurda
-          </button>
-        </div>
+        ))}
       </div>
-      <div className="toolbar-group">
+      {/* Diğer Filtreler */}
+      <div className="flex items-center gap-4 w-full sm:w-auto">
         <select
           value={assetTypeFilter}
           onChange={(e) => setAssetTypeFilter(e.target.value)}
+          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         >
           <option value="">Tüm Varlık Cinsleri</option>
           {assetTypesList.map((type) => (
@@ -65,19 +52,14 @@ const ItemsToolbar = ({
             </option>
           ))}
         </select>
-      </div>
-      <div className="toolbar-group">
         <input
           type="text"
           placeholder="Eşya ara..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ minWidth: "250px" }}
+          className="w-full sm:w-48 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         />
       </div>
-      <button onClick={handleExport} style={{ backgroundColor: "#1D6F42" }}>
-        <FaFileExcel style={{ marginRight: "0.5rem" }} /> Excel'e Aktar
-      </button>
     </div>
   );
 };

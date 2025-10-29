@@ -1,11 +1,6 @@
 import React from "react";
 
-const ItemsPagination = ({
-  currentPage,
-  totalPages,
-  setCurrentPage,
-  items,
-}) => {
+const ItemsPagination = ({ currentPage, totalPages, setCurrentPage }) => {
   // Sayfalama için gösterilecek sayfa aralığını hesaplayan fonksiyon
   const getPaginationRange = () => {
     const maxVisibleButtons = 5;
@@ -51,7 +46,7 @@ const ItemsPagination = ({
       ))}
       <button
         onClick={() => setCurrentPage(currentPage + 1)}
-        disabled={currentPage === totalPages || items.length === 0}
+        disabled={currentPage === totalPages}
       >
         İleri &raquo;
       </button>

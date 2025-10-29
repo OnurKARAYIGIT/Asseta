@@ -23,7 +23,7 @@ const AdminPanelPage = React.lazy(() => import("./pages/AdminPanelPage"));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
 const AssignmentsPage = lazy(() => import("./pages/AssignmentsPage"));
 const AssignmentEditPage = lazy(() => import("./pages/AssignmentEditPage"));
-const ItemsPage = lazy(() => import("./pages/ItemsPage"));
+const ItemsPage = lazy(() => import("./components/items/ItemsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 const PersonnelReportPage = lazy(() => import("./pages/PersonnelReportPage"));

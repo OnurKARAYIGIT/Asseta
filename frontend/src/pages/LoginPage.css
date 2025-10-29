@@ -4,42 +4,39 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: transparent; /* Arka planı şeffaf yaparak body'deki resmin görünmesini sağla */
   padding: 2rem;
 }
 
 .login-container {
-  background-color: var(--card-bg-color);
+  background-color: rgba(22, 27, 34, 0.75); /* Yarı şeffaf kart arka planı */
+  backdrop-filter: blur(10px); /* Arka planı bulanıklaştırarak cam efekti */
   padding: 2.5rem 3rem;
   border-radius: 12px;
-  box-shadow: var(--box-shadow-lg); /* Daha belirgin bir gölge */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   width: 100%;
   max-width: 420px;
   text-align: center;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Cam efekti için parlak kenarlık */
 }
 
 .login-header {
-  margin: -2.5rem -3rem 2rem -3rem; /* Konteynerin kenarlarına yasla */
-  padding: 2rem 2rem 1.5rem 2rem;
-  background-color: var(--primary-color); /* Kurumsal lacivert arka plan */
-  border-radius: 12px 12px 0 0; /* Köşeleri yuvarlat */
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Başlığı formdan ayıran çizgi */
   display: flex; /* İçeriği ortalamak için flexbox kullan */
   flex-direction: column;
   align-items: center;
 }
 
 .login-logo {
-  /* Logo görseli için stiller */
   height: 75px; /* Logoyu daha belirgin hale getir */
   width: auto;
   margin-bottom: 1rem; /* Altındaki boşluğu artır */
-  margin-left: -3.5rem;
 }
 
 .login-tagline {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.85); /* Koyu arka plan için beyaz metin */
+  color: rgba(255, 255, 255, 0.9); /* Metin rengini daha belirgin yap */
 }
 
 .login-form .form-group {
@@ -51,7 +48,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: var(--text-color); /* Tanımlı olmayan değişken düzeltildi */
+  color: rgba(255, 255, 255, 0.7); /* Label rengini daha yumuşak yap */
 }
 
 .login-form .input-wrapper {
@@ -63,16 +60,16 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-color-light);
+  color: rgba(255, 255, 255, 0.4); /* İkon rengi */
 }
 
 .login-form input {
   width: 100%;
   padding: 14px 14px 14px 45px; /* Form alanlarını daha büyük yap */
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: rgba(13, 17, 23, 0.5); /* Input arka planı (yarı şeffaf) */
+  color: var(--white-color);
   font-size: 1.05rem; /* Yazı boyutunu biraz büyüt */
 }
 
@@ -82,10 +79,52 @@
   box-shadow: 0 0 0 3px var(--primary-focus-color);
 }
 
+/* Buton Stilleri */
+.btn {
+  display: inline-block;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  width: 100%; /* Butonun tam genişlikte olmasını sağla */
+  margin-top: 1rem; /* Üstündeki elemanla arasına boşluk ekle */
+}
+
+.btn-primary {
+  color: var(--white-color);
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover-color);
+  border-color: var(--primary-hover-color);
+}
+
+.btn:disabled {
+  background-color: var(--text-color-light);
+  border-color: var(--text-color-light);
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
 .login-footer {
   margin-top: 2rem;
   font-size: 0.9rem;
-  color: var(--text-color-light);
+  color: rgba(255, 255, 255, 0.6); /* Footer metin rengi */
 }
 
 .login-footer a {

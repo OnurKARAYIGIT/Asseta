@@ -36,14 +36,14 @@ const ItemHistoryModal = ({ isOpen, onClose, item }) => {
       {isLoading ? (
         <Loader />
       ) : (
-        <div className="table-container" style={{ maxHeight: "60vh" }}>
-          <table className="summary-item-history-table">
+        <div className="overflow-y-auto max-h-[60vh]">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr>
-                <th>Personel</th>
-                <th>Durum</th>
-                <th>Zimmet Tarihi</th>
-                <th>İade Tarihi</th>
+              <tr className="border-b-2 border-border-color">
+                <th className="p-2">Personel</th>
+                <th className="p-2">Durum</th>
+                <th className="p-2">Zimmet Tarihi</th>
+                <th className="p-2">İade Tarihi</th>
               </tr>
             </thead>
             <tbody>
@@ -51,16 +51,19 @@ const ItemHistoryModal = ({ isOpen, onClose, item }) => {
                 historyData
                   .sort(
                     (a, b) =>
-                      new Date(b.assignmentDate) - new Date(a.assignmentDate)
+                      new Date(b.assignmentDate) - new Date(a.assignmentDate) // Bu sıralama backend'e taşınabilir.
                   )
                   .map((assign) => (
-                    <tr key={assign._id}>
-                      <td>{assign.personnelName}</td>
-                      <td>{assign.status}</td>
-                      <td>
+                    <tr
+                      key={assign._id}
+                      className="border-b border-border-color last:border-b-0"
+                    >
+                      <td className="p-2">{assign.personnelName}</td>
+                      <td className="p-2">{assign.status}</td>
+                      <td className="p-2">
                         {new Date(assign.assignmentDate).toLocaleDateString()}
                       </td>
-                      <td>
+                      <td className="p-2">
                         {assign.returnDate
                           ? new Date(assign.returnDate).toLocaleDateString()
                           : "-"}
@@ -69,7 +72,7 @@ const ItemHistoryModal = ({ isOpen, onClose, item }) => {
                   ))
               ) : (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: "center" }}>
+                  <td colSpan="4" className="text-center p-4">
                     Bu eşyaya ait zimmet geçmişi bulunamadı.
                   </td>
                 </tr>

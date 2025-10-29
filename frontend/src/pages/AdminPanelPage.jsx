@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import "./AdminPanelPage.css"; // Yeni CSS dosyasını import et
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../components/AuthContext";
-import "./AdminPanelPage.css";
 import UserCard from "../components/admin/UserCard";
 import AdminToolbar from "../components/admin/AdminToolbar";
 import AddUserModal from "../components/admin/AddUserModal";
@@ -197,15 +197,15 @@ const AdminPanelPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="admin-panel-page dark">
       {isLoading ? (
         <Loader />
       ) : isError ? (
         <p style={{ color: "red" }}>{error.message}</p>
       ) : (
-        <>
+        <div className="admin-panel-container">
           <AdminToolbar onAddNewUser={() => setIsAddUserModalOpen(true)} />
-          <div className="user-cards-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {users
               .slice() // State'i doğrudan değiştirmemek için kopyasını oluştur
               .sort((a, b) => {
@@ -224,7 +224,7 @@ const AdminPanelPage = () => {
                 />
               ))}
           </div>
-        </>
+        </div>
       )}
       {/* MODALLAR */}
       <EditUserModal

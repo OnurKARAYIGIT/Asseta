@@ -1,6 +1,7 @@
 import React from "react";
 import DatePicker from "react-datepicker";
-import { FaTimes, FaFileExcel } from "react-icons/fa";
+import { FaFileExcel, FaTimes } from "react-icons/fa";
+import Button from "../shared/Button";
 
 const AuditLogToolbar = ({
   filters,
@@ -12,12 +13,13 @@ const AuditLogToolbar = ({
   handleExport,
 }) => {
   return (
-    <div className="filter-toolbar">
-      <div className="toolbar-group">
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 print:hidden">
+      <div className="flex flex-wrap items-center gap-4">
         <select
           name="userId"
           value={filters.userId}
           onChange={handleFilterChange}
+          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         >
           <option value="">Tüm Kullanıcılar</option>
           {users.map((user) => (
@@ -27,33 +29,29 @@ const AuditLogToolbar = ({
           ))}
         </select>
         <DatePicker
-          selectsRange={true}
+          selectsRange
           startDate={filters.startDate ? new Date(filters.startDate) : null}
           endDate={filters.endDate ? new Date(filters.endDate) : null}
           onChange={handleDateChange}
           isClearable={true}
           placeholderText="Tarih aralığı seçin"
           dateFormat="dd/MM/yyyy"
-          maxDate={new Date()}
           locale="tr"
-          popperClassName="datepicker-popper"
-          className="date-picker-input"
+          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
         />
         {isFilterActive && (
-          <button
-            onClick={clearFilters}
-            title="Filtreleri Temizle"
-            style={{ backgroundColor: "var(--secondary-color)" }}
-          >
-            <FaTimes />
-          </button>
+          <Button variant="text" size="sm" onClick={clearFilters}>
+            <FaTimes className="mr-1" /> Filtreleri Temizle
+          </Button>
         )}
       </div>
-      <div className="toolbar-group">
-        <button onClick={handleExport} style={{ backgroundColor: "#1D6F42" }}>
-          <FaFileExcel /> Excel'e Aktar
-        </button>
-      </div>
+      <Button
+        variant="excel"
+        onClick={handleExport}
+        className="w-full sm:w-auto"
+      >
+        <FaFileExcel className="mr-2" /> Excel'e Aktar
+      </Button>
     </div>
   );
 };

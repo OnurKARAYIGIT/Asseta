@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Item = require("../models/itemModel");
 const Assignment = require("../models/assignmentModel");
 const logAction = require("../utils/auditLogger");
+const XLSX = require("xlsx");
 
 // Yinelenen hata kodunu işlemek için yardımcı fonksiyon
 const handleDuplicateKeyError = (error, res) => {
@@ -33,6 +34,7 @@ const createItem = asyncHandler(async (req, res) => {
     networkInfo,
     softwareInfo,
     description,
+    status, // status alanını request body'den al
   } = req.body;
 
   if (!name || !assetType) {
@@ -52,6 +54,7 @@ const createItem = asyncHandler(async (req, res) => {
     networkInfo,
     softwareInfo,
     description,
+    status: status || "Boşta", // Eğer status gelmezse varsayılan olarak 'Boşta' ata
   });
 
   try {
@@ -217,6 +220,7 @@ const updateItem = asyncHandler(async (req, res) => {
     networkInfo,
     softwareInfo,
     description,
+    status, // status alanını request body'den al
   } = req.body;
 
   if (!name || !assetType) {
@@ -288,10 +292,139 @@ const checkUniqueness = asyncHandler(async (req, res) => {
   res.json({ isUnique: !item });
 });
 
+// @desc    Filtrelenmiş eşyaları Excel dosyası olarak dışa aktarır
+// @route   GET /api/items/export
+// @access  Private
+const exportItems = asyncHandler(async (req, res) => {
+  // getItems ile aynı filtreleme mantığını kullanıyoruz
+  const status = req.query.status;
+  const assetType = req.query.assetType;
+  const keyword = req.query.keyword
+    ? {
+        $or: [
+          { name: { $regex: req.query.keyword, $options: "i" } },
+          { brand: { $regex: req.query.keyword, $options: "i" } },
+          { assetTag: { $regex: req.query.keyword, $options: "i" } },
+          { serialNumber: { $regex: req.query.keyword, $options: "i" } },
+          { assetType: { $regex: req.query.keyword, $options: "i" } },
+        ],
+      }
+    : {};
+
+  let filter = { ...keyword };
+  if (assetType) {
+    filter.assetType = assetType;
+  }
+
+  // getItems ile aynı agregasyon pipeline'ını kullanıyoruz, ancak sayfalama olmadan.
+  let pipeline = [];
+  if (Object.keys(filter).length > 0) {
+    pipeline.push({ $match: filter });
+  }
+  pipeline.push(
+    {
+      $lookup: {
+        from: "assignments",
+        localField: "_id",
+        foreignField: "item",
+        as: "assignments",
+      },
+    },
+    {
+      $addFields: {
+        lastAssignment: {
+          $arrayElemAt: [
+            {
+              $sortArray: {
+                input: "$assignments",
+                sortBy: { assignmentDate: -1 },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        assignmentStatus: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: ["$lastAssignment.status", "Zimmetli"] },
+                then: "Zimmetli",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Arızalı"] },
+                then: "Arızalı",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Beklemede"] },
+                then: "Beklemede",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Hurda"] },
+                then: "Hurda",
+              },
+            ],
+            default: "Boşta",
+          },
+        },
+      },
+    }
+  );
+
+  if (status) {
+    const statusMap = {
+      assigned: "Zimmetli",
+      unassigned: "Boşta",
+      arizali: "Arızalı",
+      beklemede: "Beklemede",
+      hurda: "Hurda",
+    };
+    if (statusMap[status]) {
+      pipeline.push({ $match: { assignmentStatus: statusMap[status] } });
+    }
+  }
+
+  const items = await Item.aggregate(pipeline);
+
+  // Excel için veriyi formatla
+  const dataToExport = items.map((item) => ({
+    "Eşya Adı": item.name,
+    Durum: item.assignmentStatus,
+    "Varlık Cinsi": item.assetType,
+    "Demirbaş No": item.assetTag,
+    "Seri Numarası": item.serialNumber,
+    "Marka / Model": item.brand,
+    "Model Yılı": item.modelYear,
+    "Oluşturulma Tarihi": new Date(item.createdAt).toLocaleDateString("tr-TR"),
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Eşyalar");
+
+  // Dosyayı bir buffer'a yaz
+  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
+
+  // Yanıt başlıklarını ayarla ve dosyayı gönder
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="Esya_Listesi.xlsx"'
+  );
+  res.send(buffer);
+});
+
 module.exports = {
   createItem,
   getItems,
   updateItem,
   deleteItem,
   checkUniqueness,
+  exportItems,
 };

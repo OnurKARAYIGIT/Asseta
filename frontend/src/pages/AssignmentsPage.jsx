@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
-import "./AssignmentsPage.css";
 import Loader from "../components/Loader";
 import { FaClipboardList } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -70,18 +69,14 @@ const AssignmentsPage = () => {
   // URL'den gelen arama terimini dinle
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const keyword = params.get("keyword") || "";
-    // Eğer URL'deki arama terimi mevcut state'ten farklıysa, state'i güncelle
-    if (keyword !== searchTerm) {
+    const keyword = params.get("keyword"); // || "" kısmını kaldırıyoruz
+    // Sadece URL'de bir keyword varsa ve bu mevcut arama teriminden farklıysa state'i güncelle
+    if (keyword !== null && keyword !== searchTerm) {
       setSearchTerm(keyword);
     }
 
     // URL'den gelen filtreleri state'e ata
     const statusFromUrl = params.get("status");
-    if (statusFromUrl) {
-      // Bu sayfa sadece "Beklemede" olmayanları gösterdiği için,
-      // bu filtreyi şimdilik uygulamıyoruz ama altyapı hazır.
-    }
     const locationFromUrl = params.get("location");
     if (locationFromUrl) setFilterLocation(locationFromUrl);
   }, [location.search, searchTerm]);
@@ -406,16 +401,16 @@ const AssignmentsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
       {assignmentsLoading ? (
         <Loader />
       ) : assignmentsIsError ? (
         <p style={{ color: "red" }}>{assignmentsError.message}</p>
       ) : (
         <>
-          <div className="page-header no-print">
-            <h1>
-              <FaClipboardList style={{ color: "var(--secondary-color)" }} />{" "}
+          <div className="flex items-center gap-4 mb-6">
+            <FaClipboardList className="text-secondary text-2xl" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
               Zimmet Yönetimi
             </h1>
           </div>
@@ -443,7 +438,6 @@ const AssignmentsPage = () => {
             currentPage={currentPage}
             totalPages={totalPages}
             setCurrentPage={setCurrentPage}
-            assignments={assignments}
           />
         </>
       )}
@@ -469,7 +463,7 @@ const AssignmentsPage = () => {
         onClose={() => setIsModalOpen(false)}
         assignment={selectedAssignment}
         companies={companies}
-        onUpdate={handleUpdateAssignment}
+        onEdit={(id) => navigate(`/assignment/${id}/edit`)} // Düzenleme sayfasına yönlendirme
         onDelete={() => {
           setAssignmentToDelete(selectedAssignment);
           setIsModalOpen(false);

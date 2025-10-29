@@ -19,11 +19,6 @@ const protect = asyncHandler(async (req, res, next) => {
       // Kullanıcıyı ID ile bul ve şifre olmadan req objesine ekle
       req.user = await User.findById(decoded.id).select("-password");
 
-      // Kullanıcının son görülme zamanını her yetkili istekte güncelle
-      // Not: Yüksek trafikli sistemlerde bu işlem farklı bir strateji gerektirebilir.
-      req.user.lastSeen = new Date();
-      await req.user.save();
-
       next();
     } catch (error) {
       console.error(error);

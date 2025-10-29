@@ -7,6 +7,7 @@ import {
   FaSortUp,
   FaSortDown,
 } from "react-icons/fa";
+import Button from "../shared/Button";
 
 const AssignmentsTable = ({
   assignments,
@@ -44,8 +45,10 @@ const AssignmentsTable = ({
 
   return (
     <div className="table-container">
-      <h2>Mevcut Zimmetler</h2>
-      <table>
+      <h2 className="text-xl font-semibold mb-4 text-text-main">
+        Mevcut Zimmetler
+      </h2>
+      <table className="min-w-full divide-y divide-border">
         <thead>
           <tr>
             {columns
@@ -53,7 +56,7 @@ const AssignmentsTable = ({
               .map((col) => (
                 <th
                   key={col.key}
-                  className="sortable"
+                  className="px-4 py-3 text-left text-xs font-medium text-text-light uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort(col.key)}
                 >
                   {col.name}
@@ -64,12 +67,12 @@ const AssignmentsTable = ({
             <th className="no-sort">İşlemler</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-card-background divide-y divide-border">
           {assignments.map((assignment) => (
             <tr
               key={assignment._id}
               onClick={() => handleRowClick(assignment)}
-              style={{ cursor: "pointer" }}
+              className="hover:bg-background cursor-pointer transition-colors"
             >
               {columns
                 .filter((col) => visibleColumns.includes(col.key))
@@ -77,7 +80,10 @@ const AssignmentsTable = ({
                   const value = getNestedValue(assignment, col.key);
                   if (col.key.includes("Date")) {
                     return (
-                      <td key={col.key}>
+                      <td
+                        key={col.key}
+                        className="px-4 py-3 whitespace-nowrap text-sm"
+                      >
                         {value
                           ? new Date(value).toLocaleDateString("tr-TR")
                           : "-"}
@@ -89,9 +95,12 @@ const AssignmentsTable = ({
                     col.key === "item.assetTag"
                   ) {
                     return (
-                      <td key={col.key}>
+                      <td
+                        key={col.key}
+                        className="px-4 py-3 whitespace-nowrap text-sm"
+                      >
                         <span
-                          className="link-button"
+                          className="text-primary hover:underline"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSummaryClick(
@@ -107,7 +116,14 @@ const AssignmentsTable = ({
                       </td>
                     );
                   }
-                  return <td key={col.key}>{value || "-"}</td>;
+                  return (
+                    <td
+                      key={col.key}
+                      className="px-4 py-3 whitespace-nowrap text-sm"
+                    >
+                      {value || "-"}
+                    </td>
+                  );
                 })}
               <td>
                 {assignment.formPath && (
@@ -117,45 +133,42 @@ const AssignmentsTable = ({
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     title="Zimmet Formunu Görüntüle"
+                    className="text-primary hover:text-primary-hover"
                   >
-                    <FaFileDownload
-                      style={{
-                        color: "var(--primary-color)",
-                        fontSize: "1.2rem",
-                      }}
-                    />
+                    <FaFileDownload className="w-5 h-5" />
                   </a>
                 )}
               </td>
               <td
                 onClick={(e) => e.stopPropagation()}
-                style={{ display: "flex", gap: "0.5rem" }}
+                className="px-4 py-3 whitespace-nowrap text-sm"
               >
-                {(userInfo.role === "admin" ||
-                  userInfo.role === "developer") && (
-                  <>
-                    <button
-                      title="Sil"
-                      onClick={() => handleDelete(assignment)}
-                      style={{
-                        backgroundColor: "var(--danger-color)",
-                        padding: "8px 12px",
-                      }}
-                    >
-                      <FaTrash />
-                    </button>
-                    <button
-                      title="Geçmişi Görüntüle"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick(assignment);
-                      }}
-                      style={{ padding: "8px 12px" }}
-                    >
-                      <FaHistory />
-                    </button>
-                  </>
-                )}
+                <div className="flex items-center gap-2">
+                  {(userInfo.role === "admin" ||
+                    userInfo.role === "developer") && (
+                    <>
+                      <Button
+                        title="Sil"
+                        onClick={() => handleDelete(assignment)}
+                        variant="danger"
+                        size="sm"
+                      >
+                        <FaTrash />
+                      </Button>
+                      <Button
+                        title="Geçmişi Görüntüle"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(assignment);
+                        }}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <FaHistory />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

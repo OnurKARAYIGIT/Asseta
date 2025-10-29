@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { history } from "../history.js";
 import { FaCog, FaSave } from "react-icons/fa";
 import Modal from "../components/Modal";
-import { useSettings } from "../hooks/SettingsContext";
+import Button from "../components/shared/Button";
 import { toast } from "react-toastify";
-import "./SettingsPage.css";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../api/axiosInstance";
 
 // Yeni oluşturduğumuz bileşenleri import edelim
 import NotificationSettings from "../components/settings/NotificationSettings";
 import DisplaySettings from "../components/settings/DisplaySettings";
 import ColumnManager from "../components/settings/ColumnManager";
 import AccountSecurity from "../components/settings/AccountSecurity";
+import ChangePasswordModal from "../components/profile/ChangePasswordModal";
+import Loader from "../components/Loader";
 
 // Tüm olası sütunların listesi
 const allAssignmentColumns = [
@@ -36,14 +39,40 @@ const allAssignmentColumns = [
 ];
 
 const SettingsPage = () => {
-  const { settings, setSettings } = useSettings();
-  // Ayarları düzenlemek için lokal bir state oluşturuyoruz.
-  const [localSettings, setLocalSettings] = useState(settings);
+  const queryClient = useQueryClient();
+
+  // --- React Query ile Ayarları Çekme ---
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["userSettings"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/users/settings");
+      return data;
+    },
+    // Varsayılan ayarları burada birleştirebiliriz
+    select: (data) => ({
+      itemsPerPage: 15,
+      emailOnNewAssignment: true,
+      emailOnStatusChange: true,
+      visibleColumns: { assignments: allAssignmentColumns.map((c) => c.key) },
+      ...data,
+    }),
+    staleTime: 1000 * 60 * 5, // 5 dakika
+  });
+
+  const [localSettings, setLocalSettings] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
 
+  useEffect(() => {
+    if (settings) setLocalSettings(settings);
+  }, [settings]);
+
+  // Şifre Değiştirme Modalı için state
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   const [blockedTransition, setBlockedTransition] = useState(null);
   const [unblock, setUnblock] = useState(() => () => {});
+
   // Ayarlarda değişiklik olup olmadığını kontrol et
   useEffect(() => {
     // Lokal state ile global state'i karşılaştır
@@ -91,13 +120,38 @@ const SettingsPage = () => {
     });
   };
 
-  const handleSave = () => {
-    // Ayarları localStorage'a manuel olarak kaydet
-    localStorage.setItem("appSettings", JSON.stringify(localSettings));
-    // Lokal state'i global state'e aktar
-    setSettings(localSettings);
-    toast.success("Ayarlar başarıyla kaydedildi!");
-  };
+  // --- React Query ile Ayarları Güncelleme ---
+  const { mutate: saveSettings, isLoading: isSaving } = useMutation({
+    mutationFn: (newSettings) =>
+      axiosInstance.put("/users/settings", newSettings),
+    onSuccess: (savedSettings) => {
+      // Cache'i yeni kaydedilen ayarlarla güncelle
+      queryClient.setQueryData(["userSettings"], savedSettings);
+      toast.success("Ayarlar başarıyla kaydedildi!");
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Ayarlar kaydedilemedi.");
+    },
+  });
+
+  const handleSave = () => saveSettings(localSettings);
+
+  // --- Şifre Değiştirme ---
+  const { mutate: updateUserPassword, isLoading: isPasswordUpdating } =
+    useMutation({
+      mutationFn: ({ oldPassword, newPassword }) =>
+        axiosInstance.put("/users/profile/password", {
+          oldPassword,
+          newPassword,
+        }),
+      onSuccess: () => {
+        toast.success("Şifreniz başarıyla güncellendi.");
+        setIsChangePasswordModalOpen(false);
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || "Şifre güncellenemedi.");
+      },
+    });
 
   const handleLeavePage = () => {
     if (blockedTransition) {
@@ -115,34 +169,49 @@ const SettingsPage = () => {
     setBlockedTransition(null);
   };
 
+  if (isLoading || localSettings === null) {
+    return <Loader />;
+  }
+
   return (
-    <div className="page-container">
-      <h1>
-        <FaCog style={{ color: "var(--secondary-color)" }} /> Ayarlar
-      </h1>
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
+      <div className="flex items-center gap-4 mb-8">
+        <FaCog className="text-secondary text-2xl" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
+          Ayarlar
+        </h1>
+      </div>
 
-      <NotificationSettings
-        settings={localSettings}
-        onSettingChange={handleSettingChange}
-      />
+      <div className="space-y-10">
+        <NotificationSettings
+          settings={localSettings}
+          onSettingChange={handleSettingChange}
+        />
 
-      <DisplaySettings
-        settings={localSettings}
-        onSettingChange={handleSettingChange}
-      />
+        <ColumnManager
+          visibleColumns={localSettings.visibleColumns?.assignments || []}
+          allColumns={allAssignmentColumns}
+          onColumnChange={handleColumnChange}
+        />
 
-      <ColumnManager
-        visibleColumns={localSettings.visibleColumns?.assignments || []}
-        allColumns={allAssignmentColumns}
-        onColumnChange={handleColumnChange}
-      />
+        <DisplaySettings
+          settings={localSettings}
+          onSettingChange={handleSettingChange}
+        />
 
-      <AccountSecurity onNavigateToProfile={() => history.push("/profile")} />
+        <AccountSecurity
+          onChangePasswordClick={() => setIsChangePasswordModalOpen(true)}
+        />
+      </div>
 
-      <div className="save-settings-container">
-        <button onClick={handleSave} className="save-button">
+      <div className="flex justify-end mt-8">
+        <Button
+          onClick={handleSave}
+          disabled={!isDirty}
+          className="min-w-[150px]"
+        >
           <FaSave /> Ayarları Kaydet
-        </button>
+        </Button>
       </div>
 
       {/* Kaydedilmemiş Değişiklikler Uyarı Modalı */}
@@ -150,24 +219,29 @@ const SettingsPage = () => {
         isOpen={showUnsavedChangesModal}
         onClose={handleStayOnPage}
         title="Kaydedilmemiş Değişiklikler"
+        size="small"
       >
         <p>
           Yaptığınız değişiklikler kaydedilmedi. Bu sayfadan ayrılırsanız
           değişiklikleriniz kaybolacaktır.
         </p>
         <p>Yine de ayrılmak istiyor musunuz?</p>
-        <div className="modal-actions" style={{ justifyContent: "flex-end" }}>
-          <button
-            onClick={handleStayOnPage}
-            style={{ backgroundColor: "var(--secondary-color)" }}
-          >
+        <div className="flex justify-end gap-4 mt-6">
+          <Button onClick={handleStayOnPage} variant="secondary">
             Sayfada Kal
-          </button>
-          <button onClick={handleLeavePage} className="danger">
+          </Button>
+          <Button onClick={handleLeavePage} variant="danger">
             Evet, Ayrıl
-          </button>
+          </Button>
         </div>
       </Modal>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        onSubmit={updateUserPassword}
+        isLoading={isPasswordUpdating}
+      />
     </div>
   );
 };

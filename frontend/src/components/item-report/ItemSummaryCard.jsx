@@ -1,35 +1,47 @@
 import React from "react";
-import { FaBoxOpen } from "react-icons/fa";
+import {
+  FaBoxOpen,
+  FaTag,
+  FaBarcode,
+  FaInfoCircle,
+  FaCalendarCheck,
+} from "react-icons/fa";
 
-const ItemSummaryCard = ({ item, assignmentCount }) => {
-  if (!item) return null;
+const ItemSummaryCard = ({ itemData }) => {
+  if (!itemData || !itemData.assignments || itemData.assignments.length === 0) {
+    return null;
+  }
+
+  // Eşya bilgileri ve son zimmet durumu, ilk zimmet kaydından alınabilir.
+  const item = itemData.assignments[0]?.item || {};
+  const lastStatus = itemData.assignments[0]?.status || "Bilinmiyor";
 
   return (
-    <div className="report-summary-card no-print">
-      <div className="card-avatar-section">
+    <div className="mt-6 flex flex-col sm:flex-row items-start gap-8 rounded-xl border border-border bg-background/50 p-6 shadow-lg">
+      <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-secondary/10 text-4xl text-secondary">
         <FaBoxOpen />
       </div>
-      <div className="card-details-section">
-        <div className="card-main-info">
-          <h2>{item.name}</h2>
-          <p>Eşya Zimmet Özeti</p>
-        </div>
-        <div className="card-stats">
-          <div className="stat-item">
-            <span className="stat-value">{assignmentCount}</span>
-            <span className="stat-label">Toplam Zimmet</span>
+      <div className="flex-grow">
+        <h2 className="text-2xl font-bold text-text-main">{item.name}</h2>
+        <p className="text-text-light mt-1">Eşya Zimmet Özeti</p>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 text-sm">
+          <div className="flex items-center gap-2 text-text-light">
+            <FaTag className="flex-shrink-0" />
+            <span>
+              <strong>Demirbaş No:</strong> {item.assetTag}
+            </span>
           </div>
-          <div className="stat-item">
-            <span className="stat-value">{item.brand}</span>
-            <span className="stat-label">Marka</span>
+          <div className="flex items-center gap-2 text-text-light">
+            <FaBarcode className="flex-shrink-0" />
+            <span>
+              <strong>Seri No:</strong> {item.serialNumber || "-"}
+            </span>
           </div>
-          <div className="stat-item">
-            <span className="stat-value">{item.assetTag}</span>
-            <span className="stat-label">Demirbaş No</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{item.serialNumber || "-"}</span>
-            <span className="stat-label">Seri No</span>
+          <div className="flex items-center gap-2 text-text-light">
+            <FaCalendarCheck className="flex-shrink-0" />
+            <span>
+              <strong>Mevcut Durum:</strong> {lastStatus}
+            </span>
           </div>
         </div>
       </div>

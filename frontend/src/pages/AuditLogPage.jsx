@@ -3,12 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
 import { FaHistory } from "react-icons/fa";
-import "./AuditLogPage.css"; // Yeni CSS dosyasını import et
 import { registerLocale } from "react-datepicker";
 import * as XLSX from "xlsx";
 import { tr } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
-import "./AssignmentsPage.css"; // Mevcut tablo ve filtre stillerini kullan
 import AuditLogToolbar from "../components/audit-log/AuditLogToolbar";
 import AuditLogTimeline from "../components/audit-log/AuditLogTimeline";
 import AuditLogPagination from "../components/audit-log/AuditLogPagination";
@@ -147,12 +145,13 @@ const AuditLogPage = () => {
   };
 
   return (
-    <div className="page-container">
-      <h1>
-        <FaHistory style={{ color: "var(--secondary-color)" }} /> Denetim
-        Kayıtları
-      </h1>
-
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
+      <div className="flex items-center gap-4 mb-6 print:hidden">
+        <FaHistory className="text-secondary text-2xl" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
+          Denetim Kayıtları
+        </h1>
+      </div>
       <AuditLogToolbar
         filters={filters}
         users={users}
@@ -166,7 +165,7 @@ const AuditLogPage = () => {
       {isLoading ? (
         <Loader />
       ) : isError ? (
-        <p style={{ color: "red" }}>{error.message}</p>
+        <p className="text-red-500">{error.message}</p>
       ) : (
         <>
           <AuditLogTimeline groupedLogs={groupedLogs} />
