@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
@@ -8,21 +8,24 @@ import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
 import { usePendingCount } from "../contexts/PendingCountContext";
 import { useSettings } from "../hooks/SettingsContext";
-// Yeni oluşturduğumuz bileşenleri import edelim
 import AssignmentsToolbar from "../components/assignments/AssignmentsToolbar";
 import AssignmentsTable from "../components/assignments/AssignmentsTable";
 import AssignmentsPagination from "../components/assignments/AssignmentsPagination";
 import AddAssignmentModal from "../components/assignments/AddAssignmentModal";
+import ReturnAssignmentModal from "../components/assignments/ReturnAssignmentModal.jsx"; // Yeni modalı import et
 import ConfirmationModal from "../components/shared/ConfirmationModal";
 import * as XLSX from "xlsx"; // XLSX hala handleExport için gerekli
 import AssignmentDetailModal from "../components/assignments/AssignmentDetailModal";
+import { FaUndo } from "react-icons/fa";
 import SummaryModal from "../components/assignments/SummaryModal";
 const AssignmentsPage = () => {
   // Modal state'leri
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false); // Yeni state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [assignmentToReturn, setAssignmentToReturn] = useState(null);
   // Özet Modalı için state'ler
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [summaryTitle, setSummaryTitle] = useState("");
@@ -30,6 +33,7 @@ const AssignmentsPage = () => {
   const [summaryType, setSummaryType] = useState("personnel"); // 'personnel' veya 'item'
   const [summaryPersonnelId, setSummaryPersonnelId] = useState(null); // Özet modalı için personel ID'si
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
 
   // Arama ve Filtreleme state'leri
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,7 +49,10 @@ const AssignmentsPage = () => {
   });
 
   const { settings } = useSettings();
-  const [itemsPerPage, setItemsPerPage] = useState(settings.itemsPerPage || 15);
+  // settings objesi artık null olmayacak, ama yine de güvenli erişim en iyisidir.
+  const [itemsPerPage, setItemsPerPage] = useState(
+    settings?.itemsPerPage || 15
+  );
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -81,28 +88,46 @@ const AssignmentsPage = () => {
     if (locationFromUrl) setFilterLocation(locationFromUrl);
   }, [location.search, searchTerm]);
 
+  const handleRowClick = useCallback((assignment) => {
+    setSelectedAssignment(assignment);
+    setIsModalOpen(true);
+  }, []);
+
   // URL'den gelen modal açma isteğini dinle
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const modalId = params.get("openModal");
 
     if (modalId) {
-      // React Query cache'inden veriyi bulmaya çalış
-      const allAssignments = queryClient.getQueriesData(["assignments"]);
-      let assignmentToOpen = null;
-      allAssignments.forEach((query) => {
-        const data = query[1];
-        const found = data?.assignments?.find((a) => a._id === modalId);
-        if (found) {
-          assignmentToOpen = found;
+      const findInCache = () => {
+        const allAssignments = queryClient.getQueriesData(["assignments"]);
+        for (const query of allAssignments) {
+          const data = query[1];
+          const found = data?.assignments?.find((a) => a._id === modalId);
+          if (found) return found;
         }
-      });
+        return null;
+      };
 
-      if (assignmentToOpen) {
-        handleRowClick(assignmentToOpen);
-      }
+      const openModalWithData = async () => {
+        let assignmentToOpen = findInCache();
+
+        if (!assignmentToOpen) {
+          try {
+            // Önbellekte yoksa, API'den tek bir zimmet çek
+            const { data } = await axiosInstance.get(`/assignments/${modalId}`);
+            assignmentToOpen = data;
+          } catch (error) {
+            console.error("Modal için zimmet verisi çekilemedi:", error);
+            toast.error("Zimmet detayı yüklenemedi.");
+          }
+        }
+
+        if (assignmentToOpen) handleRowClick(assignmentToOpen);
+      };
+      openModalWithData();
     }
-  }, [location.search, queryClient]); // queryClient'ı bağımlılıklara ekle
+  }, [location.search, queryClient, handleRowClick]); // handleRowClick'i bağımlılıklara ekle
 
   // --- React Query ile Veri Çekme ---
 
@@ -160,6 +185,20 @@ const AssignmentsPage = () => {
     staleTime: 1000 * 60, // 1 dakika boyunca veriyi taze kabul et
   });
 
+  // YENİ: Personel listesini çekmek için yeni sorgu
+  const { data: allPersonnel = [] } = useQuery({
+    queryKey: ["personnelList"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/personnel");
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // 5 dakika
+  });
+
+  const personnelOptionsForSelect = useMemo(() => {
+    return allPersonnel.map((p) => ({ value: p._id, label: p.fullName }));
+  }, [allPersonnel]);
+
   // React Query'den gelen verileri bileşenin kullanacağı değişkenlere ata
   const assignments = assignmentsData?.assignments || [];
   const totalPages = assignmentsData?.pages || 1;
@@ -175,10 +214,12 @@ const AssignmentsPage = () => {
   useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === "Escape") {
+        if (isReturnModalOpen) setIsReturnModalOpen(false);
         if (isModalOpen) setIsModalOpen(false);
         if (isAddModalOpen) setIsAddModalOpen(false); // AddAssignmentModal'ı da kapat
         if (assignmentToDelete) setAssignmentToDelete(null);
         if (isSummaryModalOpen) setIsSummaryModalOpen(false);
+        if (assignmentToReturn) setAssignmentToReturn(null);
       }
     };
     window.addEventListener("keydown", handleEsc);
@@ -186,19 +227,140 @@ const AssignmentsPage = () => {
     return () => {
       window.removeEventListener("keydown", handleEsc);
     };
-  }, [isModalOpen, isAddModalOpen, assignmentToDelete, isSummaryModalOpen]);
+  }, [
+    isModalOpen,
+    isReturnModalOpen,
+    isAddModalOpen,
+    assignmentToDelete,
+    isSummaryModalOpen,
+    assignmentToReturn,
+  ]);
+
+  // Yazdırma fonksiyonunu bileşenin ana kapsamında tanımlayalım
+  const printFunction = useCallback(async (assignmentId) => {
+    try {
+      const response = await axiosInstance.get(
+        `/assignments/${assignmentId}/print`,
+        { responseType: "blob" }
+      );
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
+
+      // Gizli bir iframe oluştur
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      // iframe yüklendiğinde yazdırma işlemini tetikle
+      iframe.onload = () => {
+        // PDF'in iframe içinde render olması için küçük bir gecikme
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }, 100);
+
+        // Yazdırma sonrası iframe'i ve URL'yi temizle
+        iframe.contentWindow.onafterprint = () => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        };
+      };
+    } catch (error) {
+      toast.error("PDF formu oluşturulurken bir hata oluştu.");
+      console.error("PDF Print Error:", error);
+    }
+  }, []);
+
+  // YENİ: Toplu zimmet formunu yazdırmak için fonksiyon
+  const printBatchFunction = useCallback(async (assignmentIds) => {
+    try {
+      const response = await axiosInstance.post(
+        `/assignments/print-batch`,
+        { assignmentIds }, // ID'leri body içinde gönderiyoruz
+        { responseType: "blob" }
+      );
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
+
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }, 100);
+
+        iframe.contentWindow.onafterprint = () => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        };
+      };
+    } catch (error) {
+      toast.error("Toplu PDF formu oluşturulurken bir hata oluştu.");
+      console.error("Batch PDF Print Error:", error);
+    }
+  }, []);
+
+  // YENİ: İade tutanağını yazdırmak için fonksiyon
+  const printReturnReceipt = useCallback(async (receiptId) => {
+    try {
+      const response = await axiosInstance.get(
+        `/assignments/return-receipts/${receiptId}/print`,
+        { responseType: "blob" }
+      );
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
+
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }, 100);
+
+        iframe.contentWindow.onafterprint = () => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        };
+      };
+    } catch (error) {
+      toast.error("İade tutanağı oluşturulurken bir hata oluştu.");
+      console.error("PDF Print Error (Receipt):", error);
+    }
+  }, []);
 
   const addAssignmentMutation = useMutation({
     mutationFn: (newAssignmentData) =>
-      axiosInstance.post("/assignments", newAssignmentData),
-    onSuccess: () => {
+      axiosInstance.post("/assignments", newAssignmentData.data),
+    onSuccess: (createdAssignments, newAssignmentData) => {
       invalidateAssignments();
+      queryClient.invalidateQueries({ queryKey: ["availableItems"] }); // Boştaki eşya listesini yenile
       toast.success("Yeni zimmet başarıyla oluşturuldu ve beklemeye alındı.");
+      // Eğer form yazdırma isteniyorsa ve zimmetler başarıyla oluşturulduysa
+      setIsAddModalOpen(false); // Modal'ı burada kapat
+      if (
+        newAssignmentData.printForm &&
+        createdAssignments?.data?.data &&
+        createdAssignments.data.data.length > 0 // Backend'den { data: [...] } yapısı geliyor
+      ) {
+        // Artık tek bir ID yerine, oluşturulan tüm zimmetlerin ID'lerini gönderiyoruz.
+        const newAssignmentIds = createdAssignments.data.data.map((a) => a._id);
+        printBatchFunction(newAssignmentIds);
+      }
     },
     onError: (err) => {
       toast.error(
         err.response?.data?.message || "Zimmet oluşturulurken bir hata oluştu."
       );
+      // Hata durumunda modal açık kalır, kullanıcı tekrar deneyebilir.
     },
   });
 
@@ -218,44 +380,72 @@ const AssignmentsPage = () => {
     },
   });
 
-  const handleUpdateAssignment = async (formData, formFile) => {
-    if (!selectedAssignment) return;
+  const handleUpdateAssignment = useCallback(
+    async (formData, formFile) => {
+      if (!selectedAssignment) return;
 
-    let updatedData = { ...formData };
+      const { "item.name": itemName, ...assignmentData } = formData;
+      const itemData = Object.entries(formData).reduce((acc, [key, value]) => {
+        if (key.startsWith("item.")) {
+          acc[key.replace("item.", "")] = value;
+        }
+        return acc;
+      }, {});
 
-    // Eşya verilerini ayır
-    const assignmentData = {};
-    const itemData = {};
-    Object.keys(updatedData).forEach((key) => {
-      if (key.startsWith("item.")) {
-        itemData[key.replace("item.", "")] = updatedData[key];
-      } else {
-        assignmentData[key] = updatedData[key];
-      }
-    });
+      const updatedData = { ...assignmentData, itemData };
 
-    updatedData = assignmentData;
-    updatedData.itemData = itemData;
-
-    if (formFile) {
-      const fileFormData = new FormData();
-      fileFormData.append("form", formFile);
-      try {
+      if (formFile) {
+        const fileFormData = new FormData();
+        fileFormData.append("form", formFile);
         const { data } = await axiosInstance.post("/upload", fileFormData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         updatedData.formPath = data.filePath;
-      } catch (err) {
-        toast.error("Dosya yüklenirken bir hata oluştu.");
-        return;
       }
-    }
 
-    updateAssignmentMutation.mutate({
-      assignmentId: selectedAssignment._id,
-      updatedData,
-    });
-  };
+      updateAssignmentMutation.mutate({
+        assignmentId: selectedAssignment._id,
+        updatedData,
+      });
+    },
+    [selectedAssignment, updateAssignmentMutation]
+  );
+
+  const returnMultipleAssignmentsMutation = useMutation({
+    mutationFn: (returnData) =>
+      axiosInstance.put(`/assignments/return-multiple`, returnData),
+    onSuccess: (response, returnData) => {
+      invalidateAssignments();
+      queryClient.invalidateQueries({ queryKey: ["availableItems"] });
+      toast.success("Seçilen zimmetler başarıyla iade alındı.");
+      setIsReturnModalOpen(false);
+      if (returnData.printForm && response.data.receiptId) {
+        printReturnReceipt(response.data.receiptId);
+      }
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          "Toplu iade işlemi sırasında bir hata oluştu."
+      );
+    },
+  });
+
+  const returnAssignmentMutation = useMutation({
+    mutationFn: (assignmentId) =>
+      axiosInstance.put(`/assignments/${assignmentId}/return`),
+    onSuccess: () => {
+      invalidateAssignments();
+      queryClient.invalidateQueries({ queryKey: ["availableItems"] }); // Boştaki eşya listesini yenile
+      setAssignmentToReturn(null);
+      toast.success("Zimmet başarıyla iade alındı.");
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message || "İade işlemi sırasında bir hata oluştu."
+      );
+    },
+  });
 
   const deleteAssignmentMutation = useMutation({
     mutationFn: (assignmentId) =>
@@ -279,6 +469,12 @@ const AssignmentsPage = () => {
     }
   };
 
+  const confirmReturnHandler = () => {
+    if (assignmentToReturn) {
+      returnAssignmentMutation.mutate(assignmentToReturn._id);
+    }
+  };
+
   const handleExport = () => {
     const dataToExport = assignments.map((assignment) => ({
       "Çalıştığı Firma": assignment.company.name,
@@ -288,15 +484,14 @@ const AssignmentsPage = () => {
       "Demirbaş No": assignment.item.assetTag,
       "Bulunduğu Birim": assignment.unit,
       "Bulunduğu Yer": assignment.location,
-      "Kullanıcı Adı": assignment.personnelName,
+      "Kullanıcı Adı": assignment.personnel?.fullName || "N/A",
       "Sabit Kıymet Cinsi": assignment.item.fixedAssetType,
       Marka: assignment.item.brand,
       Özellik: assignment.item.description,
       "Model Yılı": assignment.item.modelYear,
-      "Seri No": assignment.item.serialNumber,
+      "Seri No": assignment.item.serialNumber || "",
       "Mac/IP Adresi": assignment.item.networkInfo,
       "Kurulu Programlar": assignment.item.softwareInfo,
-      "Eski Kullanıcı": assignment.previousUser,
       Açıklama: assignment.assignmentNotes,
       Tarih: new Date(assignment.assignmentDate).toLocaleDateString(),
     }));
@@ -328,77 +523,88 @@ const AssignmentsPage = () => {
   };
 
   // Ayarlardan gelen sütunları ve sıralamalarını tanımla
-  const allColumns = [
-    { key: "company.name", name: "Çalıştığı Firma", group: "Zimmet" },
-    { key: "personnelName", name: "Kullanıcı Adı", group: "Zimmet" },
-    { key: "unit", name: "Bulunduğu Birim", group: "Zimmet" },
-    { key: "location", name: "Bulunduğu Yer", group: "Zimmet" },
-    { key: "registeredSection", name: "Kayıtlı Bölüm", group: "Zimmet" },
-    { key: "previousUser", name: "Eski Kullanıcı", group: "Zimmet" },
-    { key: "assignmentNotes", name: "Açıklama", group: "Zimmet" },
-    { key: "assignmentDate", name: "Zimmet Tarihi", group: "Zimmet" },
-    { key: "item.name", name: "Eşya Adı", group: "Eşya" },
-    { key: "item.assetTag", name: "Demirbaş No", group: "Eşya" },
-    { key: "item.assetType", name: "Varlık Cinsi", group: "Eşya" },
-    { key: "item.assetSubType", name: "Varlık Alt Kategori", group: "Eşya" },
-    { key: "item.fixedAssetType", name: "Sabit Kıymet Cinsi", group: "Eşya" },
-    { key: "item.brand", name: "Marka", group: "Eşya" },
-    { key: "item.modelYear", name: "Model Yılı", group: "Eşya" },
-    { key: "item.serialNumber", name: "Seri No", group: "Eşya" },
-    { key: "item.networkInfo", name: "Mac/IP Adresi", group: "Eşya" },
-    { key: "item.softwareInfo", name: "Kurulu Programlar", group: "Eşya" },
-    { key: "item.description", name: "Eşya Özellik", group: "Eşya" },
-  ];
+  const allColumns = React.useMemo(
+    () => [
+      { key: "company.name", name: "Çalıştığı Firma", group: "Zimmet" },
+      { key: "personnel.fullName", name: "Kullanıcı Adı", group: "Zimmet" }, // Bu satır zaten doğru, kontrol amaçlı
+      { key: "unit", name: "Bulunduğu Birim", group: "Zimmet" },
+      { key: "location", name: "Bulunduğu Yer", group: "Zimmet" },
+      { key: "registeredSection", name: "Kayıtlı Bölüm", group: "Zimmet" },
+      { key: "assignmentNotes", name: "Açıklama", group: "Zimmet" },
+      { key: "assignmentDate", name: "Zimmet Tarihi", group: "Zimmet" },
+      { key: "item.name", name: "Eşya Adı", group: "Eşya" },
+      { key: "item.assetTag", name: "Demirbaş No", group: "Eşya" },
+      { key: "item.assetType", name: "Varlık Cinsi", group: "Eşya" },
+      { key: "item.assetSubType", name: "Varlık Alt Kategori", group: "Eşya" },
+      { key: "item.fixedAssetType", name: "Sabit Kıymet Cinsi", group: "Eşya" },
+      { key: "item.brand", name: "Marka", group: "Eşya" },
+      { key: "item.modelYear", name: "Model Yılı", group: "Eşya" },
+      { key: "item.serialNumber", name: "Seri No", group: "Eşya" },
+      { key: "item.networkInfo", name: "Mac/IP Adresi", group: "Eşya" },
+      { key: "item.softwareInfo", name: "Kurulu Programlar", group: "Eşya" },
+      { key: "item.description", name: "Eşya Özellik", group: "Eşya" },
+    ],
+    []
+  );
 
-  const handleRowClick = (assignment) => {
-    setSelectedAssignment(assignment);
-    setIsModalOpen(true);
-  };
+  const handleSummaryClick = useCallback(
+    async (type, value, id = null) => {
+      setSummaryTitle(
+        `${value} için ${
+          type === "personnel" ? "Personel Özeti" : "Eşya Geçmişi"
+        }`
+      );
+      setIsSummaryModalOpen(true);
+      setSummaryLoading(true);
+      setSummaryData([]);
+      setSummaryError(null); // Hata durumunu sıfırla
 
-  const handleSummaryClick = async (type, value) => {
-    setSummaryTitle(
-      `${value} için ${
-        type === "personnel" ? "Personel Özeti" : "Eşya Geçmişi"
-      }`
-    );
-    setIsSummaryModalOpen(true);
-    setSummaryLoading(true);
-    setSummaryData([]);
-
-    try {
-      let params = {};
-      if (type === "personnel") {
-        setSummaryType("personnel");
-        params.personnelName = value;
-        const { data } = await axiosInstance.get("/assignments/search", {
-          params,
-        });
-        // Backend gruplanmış veri döndürüyor
-        if (data && data.length > 0) {
-          setSummaryData(data[0].assignments);
-          // Detaylı rapora git butonu için personel ID'sini sakla
-          setSummaryPersonnelId(data[0].personnelId);
-        }
-      } else if (type === "item") {
-        setSummaryType("item");
-        // Eşyanın demirbaş numarasına göre tüm zimmetlerini getiren yeni bir yol kullanabiliriz.
-        // Şimdilik, mevcut endpoint'i keyword ile kullanarak bir çözüm üretiyoruz.
-        const { data: itemAssignments } = await axiosInstance.get(
-          "/assignments/search",
-          {
-            params: { itemAssetTag: value }, // Yeni parametreyi kullan
+      try {
+        let params = {};
+        if (type === "personnel") {
+          setSummaryType("personnel");
+          params.personnelId = id; // Arama için isim yerine ID kullan
+          const { data } = await axiosInstance.get("/assignments/search", {
+            params,
+          });
+          // Backend gruplanmış veri döndürüyor
+          if (data && data.length > 0) {
+            setSummaryData(data[0].assignments);
+            // Detaylı rapora git butonu için personel ID'sini sakla
+            setSummaryPersonnelId(id); // Gelen ID'yi state'e ata
           }
-        );
-        setSummaryData(
-          itemAssignments.length > 0 ? itemAssignments[0].assignments : []
-        );
+        } else if (type === "item") {
+          setSummaryType("item");
+          // Eşyanın demirbaş numarasına göre tüm zimmetlerini getiren yeni bir yol kullanabiliriz.
+          // Şimdilik, mevcut endpoint'i keyword ile kullanarak bir çözüm üretiyoruz.
+          const { data: itemAssignments } = await axiosInstance.get(
+            "/assignments/search",
+            {
+              params: { itemAssetTag: value }, // Yeni parametreyi kullan
+            }
+          );
+          setSummaryData(
+            itemAssignments.length > 0 ? itemAssignments[0].assignments : []
+          );
+        }
+      } catch (err) {
+        console.error("Özet verisi çekilirken hata oluştu:", err);
+        toast.error("Özet verisi alınırken bir hata oluştu.");
+        setSummaryError("Özet verileri yüklenirken bir sorun oluştu.");
+      } finally {
+        setSummaryLoading(false);
       }
-    } catch (err) {
-      console.error("Özet verisi çekilirken hata oluştu:", err);
-    } finally {
-      setSummaryLoading(false);
-    }
-  };
+    },
+    [
+      setSummaryTitle,
+      setIsSummaryModalOpen,
+      setSummaryLoading,
+      setSummaryData,
+      setSummaryError,
+      setSummaryType,
+      setSummaryPersonnelId,
+    ]
+  );
 
   return (
     <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
@@ -421,17 +627,20 @@ const AssignmentsPage = () => {
             setFilterLocation={setFilterLocation}
             companies={companies}
             handleExport={handleExport}
+            onReturn={() => setIsReturnModalOpen(true)}
             onAddNew={() => setIsAddModalOpen(true)}
           />
           <AssignmentsTable
             assignments={assignments}
             columns={allColumns}
-            visibleColumns={settings.visibleColumns?.assignments || []}
+            visibleColumns={settings?.visibleColumns?.assignments || []}
             sortConfig={sortConfig}
             handleSort={handleSort}
             handleRowClick={handleRowClick}
             handleSummaryClick={handleSummaryClick}
+            // handleSummaryClick artık (type, value, id) bekliyor. Tablo bileşeni bunu doğru şekilde çağırmalı.
             handleDelete={(assignment) => setAssignmentToDelete(assignment)}
+            handleReturn={(assignment) => setAssignmentToReturn(assignment)}
             userInfo={userInfo}
           />
           <AssignmentsPagination
@@ -443,19 +652,30 @@ const AssignmentsPage = () => {
       )}
 
       {/* MODALLAR */}
+      <ReturnAssignmentModal
+        isOpen={isReturnModalOpen}
+        onClose={() => setIsReturnModalOpen(false)}
+        onSubmit={(data) => {
+          returnMultipleAssignmentsMutation.mutate(data);
+        }}
+        personnelList={personnelOptionsForSelect}
+      />
+
       <AddAssignmentModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSubmit={async (data) => {
-          try {
-            await addAssignmentMutation.mutateAsync(data);
-            return true; // Başarılı olursa modal'a true döndür
-          } catch (error) {
-            return false; // Başarısız olursa false döndür
-          }
+        onSubmit={(data) => {
+          // Artık async değil, sadece mutation'ı tetikliyor.
+          // Modal kapatma ve diğer işlemler onSuccess içinde yapılacak.
+          addAssignmentMutation.mutate({
+            data: data,
+            printForm: data.printForm,
+          });
         }}
         availableItems={availableItems}
         companies={companies}
+        personnelList={personnelOptionsForSelect} // react-select için formatlanmış veri
+        allPersonnel={allPersonnel} // Yazdırma ve diğer işlemler için tüm personel verisi
       />
 
       <AssignmentDetailModal
@@ -480,10 +700,33 @@ const AssignmentsPage = () => {
         title="Zimmet Kaydını Silme Onayı"
       >
         <p>
-          <strong>{assignmentToDelete?.personnelName}</strong> personeline ait{" "}
-          <strong>{assignmentToDelete?.item?.name}</strong> zimmet kaydını
-          kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri
-          alınamaz.
+          <strong>
+            {assignmentToDelete?.personnel?.fullName || "Bilinmeyen Personel"}
+          </strong>{" "}
+          personeline ait{" "}
+          <strong>{assignmentToDelete?.item?.name || "Bilinmeyen Eşya"}</strong>{" "}
+          zimmet kaydını kalıcı olarak silmek istediğinizden emin misiniz? Bu
+          işlem geri alınamaz.
+        </p>
+      </ConfirmationModal>
+
+      <ConfirmationModal
+        isOpen={!!assignmentToReturn}
+        onClose={() => setAssignmentToReturn(null)}
+        onConfirm={confirmReturnHandler}
+        confirmText="Evet, İade Al"
+        confirmButtonVariant="primary"
+        title="Zimmet İade Onayı"
+        icon={<FaUndo className="text-primary" />}
+      >
+        <p>
+          <strong>
+            {assignmentToReturn?.personnel?.fullName || "Bilinmeyen Personel"}
+          </strong>{" "}
+          personelindeki{" "}
+          <strong>{assignmentToReturn?.item?.name || "Bilinmeyen Eşya"}</strong>{" "}
+          zimmetini iade almak istediğinizden emin misiniz? Bu işlem sonrası
+          eşya "Boşta" durumuna geçecektir.
         </p>
       </ConfirmationModal>
 
@@ -493,13 +736,16 @@ const AssignmentsPage = () => {
         title={summaryTitle}
         loading={summaryLoading}
         data={summaryData}
+        error={summaryError}
         type={summaryType}
-        onGoToDetails={() => {
-          setIsSummaryModalOpen(false);
-          if (summaryPersonnelId) {
-            navigate(`/personnel/${summaryPersonnelId}/details`);
-          }
-        }}
+        onGoToDetails={
+          summaryPersonnelId
+            ? () => {
+                setIsSummaryModalOpen(false);
+                navigate(`/personnel/${summaryPersonnelId}/details`);
+              }
+            : null
+        }
       />
     </div>
   );

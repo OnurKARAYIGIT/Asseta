@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken"); // Bu satırı ekleyin
+const Personnel = require("../models/personnelModel"); // Personnel modelini import et
 const generateToken = require("../utils/generateToken.js");
 const Assignment = require("../models/assignmentModel");
 const logAction = require("../utils/auditLogger");
@@ -11,48 +12,49 @@ const AuditLog = require("../models/auditLogModel");
 // @route   POST /api/users/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  // Doğrulama artık middleware tarafından yapıldığı için, req.body'yi güvenle kullanabiliriz.
-  const { username, email, password, phone, position, role } = req.body;
+  // YENİ YAPI: Kullanıcı oluşturmak için önce bir personel ID'si gerekir.
+  const { personnelId, username, email, password, role, permissions } =
+    req.body;
 
-  const existingUser = await User.findOne({
-    $or: [{ username: username }, { email: email }],
-  });
-
-  if (existingUser) {
-    if (existingUser.username === username) {
-      res.status(400);
-      throw new Error("Bu kullanıcı adı zaten mevcut.");
-    }
-    if (existingUser.email === email) {
-      res.status(400);
-      throw new Error("Bu e-posta adresi zaten kullanılıyor.");
-    }
+  const personnel = await Personnel.findById(personnelId);
+  if (!personnel) {
+    res.status(404);
+    throw new Error("Kullanıcı oluşturulacak personel bulunamadı.");
   }
 
-  // Şifreyi hash'le
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+  if (personnel.userAccount) {
+    res.status(400);
+    throw new Error("Bu personelin zaten bir kullanıcı hesabı var.");
+  }
 
-  // User.create'e doğrulanmış 'value' nesnesini ve hash'lenmiş şifreyi gönder
-  const user = await User.create({ ...req.body, password: hashedPassword });
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400);
+    throw new Error("Bu e-posta adresi zaten kullanılıyor.");
+  }
+
+  // Şifre hash'leme işlemi artık userModel'deki pre-save hook'u tarafından yapılıyor.
+  const user = await User.create({
+    personnel: personnelId,
+    username, // username'i de ekliyoruz
+    email,
+    password, // Şifreyi olduğu gibi gönderiyoruz
+    role,
+    permissions,
+  });
 
   if (user) {
+    // Personel kaydını da güncelle
+    personnel.userAccount = user._id;
+    await personnel.save();
+
     await logAction(
       user, // Logu oluşturan kullanıcı (kendisi)
       "KULLANICI_KAYDI",
-      `'${user.username}' adıyla yeni bir kullanıcı hesabı oluşturuldu.`
+      `'${personnel.fullName}' personeli için yeni bir kullanıcı hesabı oluşturuldu.`
     );
-    res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      position: user.position,
-      role: user.role,
-      permissions: user.permissions,
-      accessToken: generateToken(user._id, "15m"), // Kısa ömürlü access token
-      refreshToken: generateToken(user._id, "7d"), // Uzun ömürlü refresh token
-    });
+    // loginUser'daki gibi tam bir kullanıcı objesi döndür
+    loginUser(req, res);
   } else {
     res.status(400);
     throw new Error("Geçersiz kullanıcı verisi.");
@@ -66,7 +68,8 @@ const refreshToken = asyncHandler(async (req, res) => {
   // Hem cookie'den hem de body'den gelen token'ı kontrol et
   const refreshToken = req.cookies.refreshToken || req.body.token;
   if (!refreshToken) {
-    return res.status(401).json({ message: "Refresh token bulunamadı." });
+    res.status(401);
+    throw new Error("Yetkilendirme başarısız, yenileme token'ı bulunamadı.");
   }
 
   try {
@@ -92,51 +95,60 @@ const refreshToken = asyncHandler(async (req, res) => {
 // @route   POST /api/users/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
+  // Artık sicil numarası (username) ile giriş yapılıyor
   const { username, password } = req.body;
 
-  const user = await User.findOne({ username });
-
-  if (user && (await bcrypt.compare(password, user.password))) {
-    // Son giriş ve görülme zamanını güncelle
-    user.lastLogin = new Date();
-    user.lastSeen = new Date();
-    await user.save();
-
-    await logAction(
-      user, // Logu oluşturan kullanıcı (kendisi)
-      "KULLANICI_GİRİŞİ",
-      `'${user.username}' kullanıcısı sisteme giriş yaptı.`
+  try {
+    const user = await User.findOne({ username }).populate(
+      "personnel",
+      "fullName position department"
     );
+    if (user && (await user.matchPassword(password))) {
+      // Bu satır doğru, kontrol amaçlı bırakıldı.
+      // Son giriş ve görülme zamanını güncelle
+      user.lastLogin = new Date();
+      user.lastSeen = new Date();
+      await user.save();
 
-    // Token'ları httpOnly cookie olarak ayarla
-    res.cookie("accessToken", generateToken(user._id, "15m"), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie("refreshToken", generateToken(user._id, "7d"), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      await logAction(
+        user, // Logu oluşturan kullanıcı (kendisi)
+        "KULLANICI_GİRİŞİ",
+        // Artık personel ismini kullanıyoruz
+        `'${user.personnel.fullName}' kullanıcısı sisteme giriş yaptı.`
+      );
 
-    res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      position: user.position,
-      role: user.role,
-      permissions: user.permissions,
-      // Token'ları localStorage için de gönder
-      accessToken: generateToken(user._id, "15m"),
-      refreshToken: generateToken(user._id, "7d"),
-    });
-  } else {
-    res.status(401); // Unauthorized
-    throw new Error("Geçersiz kullanıcı adı veya şifre.");
+      // Token'ları httpOnly cookie olarak ayarla
+      res.cookie("accessToken", generateToken(user._id, "15m"), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000,
+      });
+      res.cookie("refreshToken", generateToken(user._id, "7d"), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.json({
+        _id: user._id,
+        personnel: user.personnel, // username, position vb. bilgiler burada
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        // Token'ları localStorage için de gönder
+        accessToken: generateToken(user._id, "15m"),
+        refreshToken: generateToken(user._id, "7d"),
+      });
+    } else {
+      res.status(401); // Unauthorized
+      throw new Error("Geçersiz sicil numarası veya şifre.");
+    }
+  } catch (error) {
+    // Hata durumunda 500 koduyla birlikte daha açıklayıcı bir mesaj gönderelim.
+    res.status(500);
+    throw new Error(`Giriş işlemi sırasında bir hata oluştu: ${error.message}`);
   }
 });
 
@@ -155,25 +167,27 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).populate(
+    "personnel",
+    "fullName position department"
+  );
 
   if (user) {
-    const assignments = await Assignment.find({ personnelName: user.username })
+    // Artık personnel ID'si ile arama yapıyoruz
+    const assignments = await Assignment.find({ personnel: user.personnel._id })
       .populate("item", "name brand serialNumber assetTag")
       .populate("company", "name")
       .sort({ assignmentDate: -1 });
 
     // Kullanıcının tüm işlem geçmişini bul
-    const actions = await AuditLog.find({ user: user._id }).sort({
+    const actions = await AuditLog.find({ "user._id": user._id }).sort({
       createdAt: -1,
     });
 
     res.json({
       _id: user._id,
-      username: user.username,
+      personnel: user.personnel,
       email: user.email,
-      phone: user.phone,
-      position: user.position,
       role: user.role,
       lastLogin: user.lastLogin,
       assignments: assignments,
@@ -235,8 +249,21 @@ const updateUserSettings = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
   if (user) {
-    user.settings = req.body;
-    await user.save();
+    // Gelen yeni ayarları, mevcut ayarların üzerine yazmak yerine onlarla birleştir.
+    // Bu, sadece değiştirilen ayarların güncellenmesini sağlar.
+    const currentSettings = user.settings ? user.settings.toObject() : {};
+    const newSettings = {
+      ...currentSettings,
+      ...req.body,
+      visibleColumns: {
+        ...currentSettings.visibleColumns,
+        ...req.body.visibleColumns,
+      },
+    };
+    user.settings = newSettings;
+    // Mongoose'a 'settings' alanının değiştirildiğini bildir.
+    user.markModified("settings");
+    await user.save({ validateBeforeSave: false }); // Şema doğrulamalarını atla
     // Loglama eklenebilir
     res.json(user.settings);
   } else {
@@ -249,31 +276,15 @@ const updateUserSettings = asyncHandler(async (req, res) => {
 // @route   GET /api/users
 // @access  Private/Admin
 const getAllUsers = asyncHandler(async (req, res) => {
-  // Kullanıcıları ve her birinin son denetim kaydını getirmek için aggregation kullanıyoruz.
-  const users = await User.aggregate([
-    {
-      $lookup: {
-        from: "auditlogs", // Denetim kayıtlarının collection adı
-        localField: "_id",
-        foreignField: "user",
-        as: "actions",
-      },
-    },
-    {
-      $addFields: {
-        // actions dizisinin son elemanını (en son eylemi) al
-        lastAction: { $arrayElemAt: ["$actions", -1] },
-      },
-    },
-    {
-      // Şifre ve tüm aksiyon listesi gibi gereksiz alanları sonuçtan çıkar
-      $project: {
-        password: 0,
-        actions: 0,
-      },
-    },
-    { $sort: { createdAt: -1 } }, // Kullanıcıları en yeniden eskiye sırala
-  ]);
+  // YENİ YAPI: Kullanıcıları personel bilgileriyle birlikte getir.
+  // Eski karmaşık aggregation yerine populate kullanmak daha temiz ve verimli.
+  const users = await User.find({})
+    .populate({
+      path: "personnel",
+      select: "fullName employeeId department position", // İhtiyaç duyulan alanları seç
+    })
+    .select("-password") // Şifreyi gönderme
+    .sort({ createdAt: -1 });
 
   res.json(users);
 });
@@ -282,12 +293,16 @@ const getAllUsers = asyncHandler(async (req, res) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  // Silinecek kullanıcının personel bilgilerini de alalım
+  const user = await User.findById(req.params.id).populate(
+    "personnel",
+    "fullName"
+  );
   if (user) {
     await logAction(
       req.user,
       "KULLANICI_SİLİNDİ",
-      `'${user.username}' kullanıcısı silindi.`
+      `'${user.personnel?.fullName || user.email}' kullanıcısı silindi.`
     );
     await user.deleteOne();
     res.json({ message: "Kullanıcı başarıyla silindi." });
@@ -301,21 +316,32 @@ const deleteUser = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 const updateUserByAdmin = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).populate(
+    "personnel",
+    "fullName"
+  );
   if (user) {
-    user.username = req.body.username || user.username;
-    user.email = req.body.email || user.email;
-    user.phone = req.body.phone || user.phone;
-    user.position = req.body.position || user.position;
+    // Kullanıcıya ait rol ve izinler güncellenir
     user.role = req.body.role || user.role;
-
     user.permissions = req.body.permissions ?? user.permissions;
+
+    // Personel bilgileri (isim, departman vb.) Personnel koleksiyonundan güncellenmelidir.
+    // Bu endpoint şimdilik sadece kullanıcıya özel alanları güncellesin.
+    user.email = req.body.email || user.email;
+
+    const updatedUser = await user.save();
+
     await logAction(
       req.user,
       "KULLANICI_GÜNCELLENDİ",
-      `'${user.username}' kullanıcısının rolü '${user.role}' olarak güncellendi.`
+      `'${
+        user.personnel?.fullName || updatedUser.email
+      }' kullanıcısının bilgileri güncellendi.`
     );
-    const updatedUser = await user.save();
+
+    // Güncellenmiş kullanıcıyı personel bilgileriyle birlikte döndür
+    await updatedUser.populate("personnel", "fullName position department");
+
     res.json(updatedUser);
   } else {
     res.status(404);
@@ -334,7 +360,10 @@ const resetUserPassword = asyncHandler(async (req, res) => {
     throw new Error("Lütfen yeni şifreyi girin.");
   }
 
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).populate(
+    "personnel",
+    "fullName"
+  );
 
   if (user) {
     const salt = await bcrypt.genSalt(10);
@@ -343,10 +372,14 @@ const resetUserPassword = asyncHandler(async (req, res) => {
     await logAction(
       req.user,
       "ŞİFRE_SIFIRLANDI",
-      `'${user.username}' kullanıcısının şifresi sıfırlandı.`
+      `'${
+        user.personnel?.fullName || user.email
+      }' kullanıcısının şifresi sıfırlandı.`
     );
     res.json({
-      message: `${user.username} kullanıcısının şifresi başarıyla sıfırlandı.`,
+      message: `${
+        user.personnel?.fullName || user.email
+      } kullanıcısının şifresi başarıyla sıfırlandı.`,
     });
   } else {
     res.status(404);
@@ -363,10 +396,13 @@ const getUserProfileByName = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Personel adı gerekli." });
   }
 
-  // İsimle eşleşen ilk kullanıcıyı bul
-  const user = await User.findOne({
-    username: { $regex: `^${name}$`, $options: "i" },
-  }).select("-password"); // Şifreyi gönderme
+  // Artık isme göre personel arayıp, personelin userAccount'u üzerinden kullanıcıyı buluyoruz.
+  const personnel = await Personnel.findOne({
+    fullName: { $regex: `^${name}$`, $options: "i" },
+  });
+
+  if (!personnel || !personnel.userAccount) return res.json(null);
+  const user = await User.findById(personnel.userAccount).select("-password");
 
   if (user) {
     res.json(user);

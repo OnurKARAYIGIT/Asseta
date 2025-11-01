@@ -124,8 +124,7 @@ const AuditLogPage = () => {
       return;
     }
     const dataToExport = logs.map((log) => ({
-      Kullanıcı: log.user?.username || "Sistem",
-      İşlem: log.action.replace(/_/g, " "),
+      Kullanıcı: log.user?.lace(/_/g, " "),
       Detaylar: log.details,
       Tarih: new Date(log.createdAt).toLocaleString("tr-TR"),
     }));

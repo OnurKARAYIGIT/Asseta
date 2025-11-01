@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import Button from "../shared/Button";
 
 const EditUserModal = ({ isOpen, onClose, user, onSave, currentUser }) => {
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     role: "user",
   });
@@ -12,7 +12,6 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, currentUser }) => {
   useEffect(() => {
     if (user) {
       setFormData({
-        username: user.username || "",
         email: user.email || "",
         role: user.role || "user",
       });
@@ -50,21 +49,13 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, currentUser }) => {
     >
       <form onSubmit={handleSubmit} id="edit-user-form" className="space-y-4">
         <div>
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-text-main mb-1"
-          >
-            Kullanıcı Adı
+          <label className="block text-sm font-medium text-text-main mb-1">
+            Personel Adı
           </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            required
-          />
+          {/* İsim artık düzenlenemez, sadece gösterilir */}
+          <p className="w-full px-3 py-2 bg-light-gray/50 border border-border rounded-lg">
+            {user?.personnel?.fullName || "İsim Bilgisi Yok"}
+          </p>
         </div>
         <div>
           <label

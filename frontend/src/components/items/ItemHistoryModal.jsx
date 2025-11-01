@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
 import Loader from "../Loader";
 import axiosInstance from "../../api/axiosInstance";
 import { toast } from "react-toastify";

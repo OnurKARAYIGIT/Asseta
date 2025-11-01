@@ -3,7 +3,7 @@ import { FaBell, FaCheckCircle } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext"; // useAuth hook'unu import et
 import axiosInstance from "../api/axiosInstance";
-import Modal from "./Modal"; // Modal bileşenini import et
+import Modal from "./shared/Modal.jsx";
 
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);

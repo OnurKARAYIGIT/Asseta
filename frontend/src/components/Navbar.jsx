@@ -32,6 +32,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const searchInputRef = useRef(null);
+  const [openMenu, setOpenMenu] = useState(null); // Hangi menünün açık olduğunu tutacak state
   const [isScrolled, setIsScrolled] = useState(false);
   const searchContainerRef = useRef(null);
   const { pendingCount } = usePendingCount();
@@ -170,6 +171,16 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     performSearch();
   };
 
+  // Menüye tıklandığında aç/kapat
+  const handleMenuClick = (itemLabel) => {
+    setOpenMenu(openMenu === itemLabel ? null : itemLabel);
+  };
+
+  // Dışarıya tıklandığında menüyü kapat
+  useEffect(() => {
+    document.addEventListener("click", () => setOpenMenu(null));
+  }, []);
+
   // Menü elemanlarını render etmek için iç içe (recursive) fonksiyon
   const renderNavItems = (items) => {
     return items
@@ -198,12 +209,18 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
 
         return (
           <li
-            key={index}
-            className={`relative group ${
-              isScrolled
-                ? "rounded-lg backdrop-blur-3xl shadow-lg  border-white bg-slate-400 bg-opacity-35"
-                : ""
-            } `}
+            key={item.label}
+            className="relative"
+            onClick={(e) => {
+              // Eğer alt menü varsa, linke gitmesini engelle ve menüyü aç/kapat
+              if (item.children) {
+                e.stopPropagation(); // Dışarıya tıklama event'ini tetikleme
+                handleMenuClick(item.label);
+              } else {
+                // Alt menü yoksa, menüyü kapat (mobil için)
+                setOpenMenu(null);
+              }
+            }}
           >
             <NavLink
               className={({ isActive }) =>
@@ -211,12 +228,15 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
                   isActive ? "!text-white shadow-sm shadow-gray-600" : ""
                 }`
               }
+              to={item.children ? "#" : item.to} // Alt menü varsa link verme, yoksa ver
             >
               <span className={iconColorClass}>{item.icon}</span>
               <span className="text-white">{item.label}</span>
               {item.children && (
                 <FaChevronDown
-                  className={`ml-1 text-xs transition-transform group-hover:rotate-180 ${textShadowClass}`}
+                  className={`ml-1 text-xs transition-transform ${
+                    openMenu === item.label ? "rotate-180" : ""
+                  } ${textShadowClass}`}
                 />
               )}
               {item.to === "/pending-assignments" && pendingCount > 0 && (
@@ -225,8 +245,8 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
                 </span>
               )}
             </NavLink>
-            {item.children && (
-              <ul className="absolute top-full left-0 mt-2 min-w-[220px] bg-card-background/80 backdrop-blur-md shadow-lg rounded-b-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border border-white/10">
+            {item.children && openMenu === item.label && (
+              <ul className="absolute top-full left-0 mt-2 min-w-[220px] bg-card-background/80 backdrop-blur-md shadow-lg rounded-b-lg p-2 z-10 border border-white/10">
                 {renderNavItems(item.children)}
               </ul>
             )}

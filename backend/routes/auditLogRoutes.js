@@ -4,10 +4,7 @@ const {
   getAuditLogs,
   getAuditLogUsers,
 } = require("../controllers/auditLogController");
-const {
-  protect,
-  adminOrDeveloper,
-} = require("../middleware/authMiddleware.js");
+const { protect, adminOrDeveloper } = require("../middleware/authMiddleware");
 
 router.route("/").get(protect, adminOrDeveloper, getAuditLogs);
 router.route("/users").get(protect, adminOrDeveloper, getAuditLogUsers);

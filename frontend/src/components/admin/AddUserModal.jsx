@@ -1,10 +1,19 @@
-import React, { useState } from "react";
-import Modal from "../Modal";
+import React, { useState, useEffect } from "react";
+import Modal from "../shared/Modal.jsx";
 import Button from "../shared/Button";
+import Select from "react-select";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "../../api/axiosInstance";
 
-const AddUserModal = ({ isOpen, onClose, onSubmit, currentUserRole }) => {
+const AddUserModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  currentUserRole,
+  existingUsers,
+}) => {
   const initialFormState = {
-    username: "",
+    personnelId: "",
     email: "",
     password: "",
     role: "user",
@@ -12,9 +21,41 @@ const AddUserModal = ({ isOpen, onClose, onSubmit, currentUserRole }) => {
   const [formData, setFormData] = useState(initialFormState);
   const [error, setError] = useState("");
 
+  // Henüz kullanıcı hesabı olmayan personelleri filtrelemek için
+  const { data: allPersonnel = [] } = useQuery({
+    queryKey: ["allPersonnelForUserCreation"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/personnel");
+      return data;
+    },
+    enabled: isOpen, // Sadece modal açıkken çalıştır
+  });
+
+  // Sadece hesabı olan personellerin ID'lerini içeren bir Set oluştur (daha hızlı kontrol için)
+  const existingUserPersonnelIds = new Set(
+    existingUsers.map((u) => u.personnel?._id).filter(Boolean)
+  );
+  const personnelWithoutAccount = allPersonnel.filter(
+    (p) => !existingUserPersonnelIds.has(p._id)
+  );
+
+  const personnelOptions = personnelWithoutAccount.map((p) => ({
+    value: p._id,
+    label: `${p.fullName} (${p.employeeId})`,
+    email: p.email, // E-postayı otomatik doldurmak için
+  }));
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePersonnelChange = (selectedOption) => {
+    setFormData((prev) => ({
+      ...prev,
+      personnelId: selectedOption.value,
+      email: selectedOption.email || "", // Seçilen personelin e-postasını otomatik doldur
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -28,6 +69,14 @@ const AddUserModal = ({ isOpen, onClose, onSubmit, currentUserRole }) => {
       setError("Kullanıcı oluşturulamadı. Lütfen bilgileri kontrol edin.");
     }
   };
+
+  // Modal her açıldığında formu sıfırla
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(initialFormState);
+      setError("");
+    }
+  }, [isOpen]);
 
   return (
     <Modal
@@ -53,20 +102,18 @@ const AddUserModal = ({ isOpen, onClose, onSubmit, currentUserRole }) => {
           </div>
         )}
         <div>
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-text-main mb-1"
-          >
-            Kullanıcı Adı
+          <label className="block text-sm font-medium text-text-main mb-1">
+            Personel Seçimi *
           </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            required
+          <Select
+            options={personnelOptions}
+            onChange={handlePersonnelChange}
+            placeholder="Kullanıcı hesabı atanacak personeli seçin..."
+            noOptionsMessage={() =>
+              "Tüm personellerin kullanıcı hesabı var veya personel bulunamadı."
+            }
+            className="react-select-container"
+            classNamePrefix="react-select"
           />
         </div>
         <div>
@@ -82,6 +129,7 @@ const AddUserModal = ({ isOpen, onClose, onSubmit, currentUserRole }) => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            readOnly // E-postanın personel kaydından gelmesi daha güvenli
             className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
             required
           />

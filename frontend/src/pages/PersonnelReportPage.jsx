@@ -71,7 +71,7 @@ const PersonnelReportPage = () => {
   const singleResult =
     searchData && searchData.length === 1 ? searchData[0] : null;
   const results = singleResult ? singleResult.assignments : [];
-  const searchedPersonnel = singleResult
+  const searchedPersonnelName = singleResult
     ? singleResult.personnelName
     : submittedSearchTerm;
   const selectedPersonnelId = singleResult ? singleResult.personnelId : null;
@@ -82,9 +82,7 @@ const PersonnelReportPage = () => {
 
   const handleCardClick = () => {
     if (selectedPersonnelId) {
-      // personnelId yerine personnelName'i URL'de kullanmak daha tutarlı olabilir.
-      // Backend'in personnelId ile de arama yapabildiğini varsayıyoruz.
-      // Eğer `personnelId` bir obje ise, `selectedPersonnelId._id` kullanmak gerekebilir.
+      // Artık tutarlı bir ObjectId'miz var.
       navigate(`/personnel/${selectedPersonnelId}/details`);
     }
   };
@@ -161,7 +159,7 @@ const PersonnelReportPage = () => {
         <div ref={reportRef}>
           <PersonnelSummaryCard
             results={results}
-            searchedPersonnel={searchedPersonnel}
+            searchedPersonnel={searchedPersonnelName}
             onClick={handleCardClick}
           />
         </div>

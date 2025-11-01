@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { history } from "../history.js";
 import { FaCog, FaSave } from "react-icons/fa";
-import Modal from "../components/Modal";
+import Modal from "../components/shared/Modal";
 import Button from "../components/shared/Button";
 import { toast } from "react-toastify";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 
 // Yeni oluşturduğumuz bileşenleri import edelim
+import { defaultSettings } from "../hooks/SettingsContext";
 import NotificationSettings from "../components/settings/NotificationSettings";
 import DisplaySettings from "../components/settings/DisplaySettings";
 import ColumnManager from "../components/settings/ColumnManager";
@@ -17,12 +18,11 @@ import Loader from "../components/Loader";
 
 // Tüm olası sütunların listesi
 const allAssignmentColumns = [
-  { key: "company.name", name: "Çalıştığı Firma", group: "Zimmet" },
-  { key: "personnelName", name: "Kullanıcı Adı", group: "Zimmet" },
+  { key: "personnel.fullName", name: "Kullanıcı Adı", group: "Zimmet" },
+  { key: "company.name", name: "Konum", group: "Zimmet" },
   { key: "unit", name: "Bulunduğu Birim", group: "Zimmet" },
   { key: "location", name: "Bulunduğu Yer", group: "Zimmet" },
   { key: "registeredSection", name: "Kayıtlı Bölüm", group: "Zimmet" },
-  { key: "previousUser", name: "Eski Kullanıcı", group: "Zimmet" },
   { key: "assignmentNotes", name: "Açıklama", group: "Zimmet" },
   { key: "assignmentDate", name: "Zimmet Tarihi", group: "Zimmet" },
   { key: "item.name", name: "Eşya Adı", group: "Eşya" },
@@ -46,16 +46,8 @@ const SettingsPage = () => {
     queryKey: ["userSettings"],
     queryFn: async () => {
       const { data } = await axiosInstance.get("/users/settings");
-      return data;
+      return data; // Veriyi olduğu gibi döndür, burada birleştirme yapma.
     },
-    // Varsayılan ayarları burada birleştirebiliriz
-    select: (data) => ({
-      itemsPerPage: 15,
-      emailOnNewAssignment: true,
-      emailOnStatusChange: true,
-      visibleColumns: { assignments: allAssignmentColumns.map((c) => c.key) },
-      ...data,
-    }),
     staleTime: 1000 * 60 * 5, // 5 dakika
   });
 

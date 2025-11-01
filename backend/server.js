@@ -13,6 +13,7 @@ const userRoutes = require("./routes/userRoutes.js");
 const locationRoutes = require("./routes/locationRoutes.js");
 const itemRoutes = require("./routes/itemRoutes.js");
 const assignmentRoutes = require("./routes/assignmentRoutes.js");
+const personnelRoutes = require("./routes/personnelRoutes.js");
 const uploadRoutes = require("./routes/uploadRoutes.js");
 const auditLogRoutes = require("./routes/auditLogRoutes.js");
 const dashboardRoutes = require("./routes/dashboardRoutes.js");
@@ -21,7 +22,8 @@ const searchRoutes = require("./routes/searchRoutes.js");
 const app = express();
 
 // Gelen isteklerdeki JSON verilerini ayrıştırmak için middleware
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 
 // Farklı domainlerden gelen isteklere izin vermek için CORS'u etkinleştir
@@ -33,6 +35,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/personnel", personnelRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/dashboard", dashboardRoutes);

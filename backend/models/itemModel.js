@@ -47,6 +47,12 @@ const itemSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    status: {
+      type: String,
+      required: true,
+      default: "Boşta",
+      enum: ["Boşta", "Zimmetli", "Arızalı", "Hurda", "Beklemede"],
+    },
   },
   { timestamps: true }
 );

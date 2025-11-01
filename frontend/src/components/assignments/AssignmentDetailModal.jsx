@@ -1,5 +1,5 @@
 import React from "react";
-import Modal from "../Modal"; // Modal bileşenini import ediyoruz
+import Modal from "../shared/Modal.jsx";
 import Button from "../shared/Button"; // Button bileşenini import ediyoruz
 
 const AssignmentDetailModal = ({

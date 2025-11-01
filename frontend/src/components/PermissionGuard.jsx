@@ -1,23 +1,13 @@
 import React from "react";
-import Modal from "./Modal";
+import Modal from "./shared/Modal.jsx";
 import { FaExclamationTriangle } from "react-icons/fa";
 import { useAuth } from "./AuthContext";
 
 const PermissionGuard = ({ requiredPermission, children }) => {
-  const { userInfo } = useAuth();
+  const { hasPermission } = useAuth(); // hasPermission fonksiyonunu context'ten al
 
-  // Admin ve Developer rolleri her zaman yetkilidir (Süper Kullanıcılar)
-  if (
-    userInfo &&
-    (userInfo.role === "admin" || userInfo.role === "developer")
-  ) {
-    return children;
-  }
-
-  // Kullanıcının gerekli yetkisi var mı?
-  const hasPermission = userInfo?.permissions?.includes(requiredPermission);
-
-  if (hasPermission) {
+  // Yetki kontrolünü merkezi hasPermission fonksiyonuna devret
+  if (hasPermission(requiredPermission)) {
     return children;
   }
 

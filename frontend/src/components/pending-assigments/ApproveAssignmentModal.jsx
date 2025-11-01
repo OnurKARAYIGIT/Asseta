@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import Loader from "../Loader";
 import { FaUpload, FaCheck } from "react-icons/fa";
 

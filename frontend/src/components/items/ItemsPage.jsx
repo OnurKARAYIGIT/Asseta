@@ -5,7 +5,7 @@ import axiosInstance from "../../api/axiosInstance";
 import Loader from "../Loader";
 import { FaBoxOpen, FaPlus, FaFileExcel } from "react-icons/fa";
 import { useAuth } from "../AuthContext";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
 import ConfirmationModal from "../shared/ConfirmationModal"; // ConfirmationModal'ı import et
 import ItemForm from "../ItemForm"; // Yeni form bileşenini import et
 import { useSettings } from "../../hooks/SettingsContext";

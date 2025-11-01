@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import Button from "../shared/Button";
 
 const ChangePasswordModal = ({ isOpen, onClose, onSubmit, isLoading }) => {

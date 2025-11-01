@@ -4,7 +4,6 @@ const logAction = async (user, action, details) => {
   try {
     await AuditLog.create({
       user: user._id,
-      username: user.username,
       action,
       details,
     });

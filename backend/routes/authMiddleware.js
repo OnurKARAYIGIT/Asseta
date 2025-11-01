@@ -15,9 +15,13 @@ const protect = asyncHandler(async (req, res, next) => {
       req.user = await User.findById(decoded.id).select("-password");
       next();
     } catch (error) {
-      console.error(error);
       res.status(401);
-      throw new Error("Yetkisiz, token başarısız");
+      if (error.name === "TokenExpiredError") {
+        // Token süresi dolduysa, istemcinin token'ı yenilemesi gerektiğini belirt.
+        throw new Error("Oturum süresi doldu, lütfen tekrar deneyin.");
+      } else {
+        throw new Error("Yetkilendirme başarısız, token geçersiz.");
+      }
     }
   }
 

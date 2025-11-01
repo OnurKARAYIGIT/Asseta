@@ -40,7 +40,7 @@ const adminOrDeveloper = (req, res, next) => {
   ) {
     next();
   } else {
-    res.status(403); // Forbidden
+    res.status(403); // 401 yerine 403 (Forbidden)
     throw new Error("Bu işleme yetkiniz yok.");
   }
 };

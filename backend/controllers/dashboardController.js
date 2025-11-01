@@ -2,7 +2,8 @@ const asyncHandler = require("express-async-handler");
 const Assignment = require("../models/assignmentModel");
 const Item = require("../models/itemModel");
 const Location = require("../models/locationModel");
-const User = require("../models/userModel.js");
+const User = require("../models/userModel");
+const Personnel = require("../models/personnelModel"); // Personnel modelini import et
 
 // @desc    Ana panel için optimize edilmiş istatistikleri getirir
 // @route   GET /api/dashboard/stats
@@ -12,7 +13,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const [
     // 1. Temel sayım istatistikleri
     totalItems,
-    totalUsers,
+    totalPersonnel, // Değişken adını daha anlamlı hale getiriyoruz
     totalLocations,
     // 2. Son 5 zimmet
     recentAssignments,
@@ -24,13 +25,14 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     itemStats,
   ] = await Promise.all([
     Item.countDocuments({}),
-    User.countDocuments({}),
+    Personnel.countDocuments({}), // Artık Personnel koleksiyonunu sayıyoruz
     Location.countDocuments({}),
     Assignment.find({})
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("item", "name brand")
-      .populate("company", "name"),
+      .populate("company", "name")
+      .populate("personnel", "fullName"), // Eksik olan personel populate işlemi eklendi.
     Assignment.aggregate([
       {
         $group: {
@@ -124,7 +126,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   res.json({
     totalAssignments: totalActiveAssignments,
     totalItems,
-    totalUsers,
+    totalPersonnel, // Frontend'e doğru veriyi gönder
     totalLocations,
     monthlyAssignments,
     itemDistribution,

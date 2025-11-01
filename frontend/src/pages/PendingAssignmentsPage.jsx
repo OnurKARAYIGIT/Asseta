@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import "../components/assignments/AssignmentsPage.css"; // Pagination stilleri için gerekli
+import "./AssignmentsPage.css"; // Pagination stilleri için gerekli
 import { toast } from "react-toastify";
 import { useAuth } from "../components/AuthContext";
 import { usePendingCount } from "../contexts/PendingCountContext";

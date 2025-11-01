@@ -47,7 +47,9 @@ const UserMenu = ({ inactivityTime, isTimeoutWarning }) => {
             <FaUserCircle className="text-3xl text-yellow-400" />
           </div>
           <div className="flex flex-col items-start text-white">
-            <span className="font-semibold">{userInfo.username}</span>
+            <span className="font-semibold">
+              {userInfo.personnel?.fullName || userInfo.email}
+            </span>
             <div
               className={`flex items-center gap-1 text-xs transition-colors ${
                 isTimeoutWarning

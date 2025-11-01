@@ -26,8 +26,13 @@ const assignmentSchema = new mongoose.Schema(
       required: true,
       ref: "Item",
     },
-    personnelName: { type: String, required: true, index: true },
-    personnelId: { type: String },
+    // YENİ YAPI: Artık 'personnelName' yerine 'Personnel' modeline referans kullanacağız.
+    personnel: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Personnel",
+      required: true,
+      index: true,
+    },
     company: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -37,7 +42,6 @@ const assignmentSchema = new mongoose.Schema(
     unit: { type: String, required: true },
     location: { type: String },
     registeredSection: { type: String },
-    previousUser: { type: String },
     assignmentDate: { type: Date, default: Date.now },
     returnDate: { type: Date },
     status: {

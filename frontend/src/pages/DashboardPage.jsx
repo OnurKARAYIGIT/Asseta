@@ -73,7 +73,7 @@ const DashboardPage = () => {
         <p className="text-base text-text-light">
           Hoş Geldin,{" "}
           <span className="font-semibold text-text-main">
-            {userInfo?.username}!
+            {userInfo?.personnel?.fullName || userInfo?.email}!
           </span>
         </p>
       </div>
@@ -104,8 +104,8 @@ const DashboardPage = () => {
                 className="total-users-card"
                 icon={<FaUsers />}
                 title="Toplam Personel"
-                value={stats.totalUsers}
-                linkTo="/admin"
+                value={stats.totalPersonnel}
+                // linkTo="/admin" // IK modülü eklenene kadar yönlendirme kaldırıldı.
               />
               <StatCard
                 className="total-locations-card"

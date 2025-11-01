@@ -100,6 +100,7 @@ export const AuthProvider = ({ children }) => {
     return () => axiosInstance.interceptors.response.eject(interceptor);
   }, [refreshToken]);
 
+  // Artık sicil numarası (username) ile giriş yapılıyor
   const login = async (username, password) => {
     setLoading(true);
     setError(null);
@@ -109,18 +110,7 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
-      setUserInfo(data);
-
-      // Giriş yapıldığında Axios başlıklarını ayarla
-      if (data.accessToken) {
-        axiosInstance.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${data.accessToken}`;
-      }
-
-      // Şimdilik sadece local storage kullanalım
-      localStorage.setItem("userInfo", JSON.stringify(data));
-      setLoading(false);
+      loginSuccess(data); // Kod tekrarını önlemek için loginSuccess'i çağır
       return true; // Başarılı girişi belirtmek için
     } catch (err) {
       const errorMessage =
@@ -147,12 +137,18 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = useCallback(
     (requiredPermission) => {
       if (!userInfo) return false;
+      // userInfo.personnel.fullName gibi alanlara erişim gerekebilir.
       // Admin ve Developer her zaman yetkilidir
       if (userInfo.role === "admin" || userInfo.role === "developer") {
         return true;
       }
-      // 'user' rolü için özel yetkileri kontrol et
-      return userInfo.permissions?.includes(requiredPermission);
+      // 'user' rolü için özel yetkileri kontrol et.
+      // Bu kontrol, "zimmetler" yetkisinin "zimmetler/onayla" gibi alt yolları da
+      // kapsamasını sağlar. Örneğin, bir menü elemanının `permission` prop'u "zimmetler" ise,
+      // bu yetkiye sahip kullanıcı o menüyü ve altındaki tüm linkleri görebilir.
+      return userInfo.permissions?.some((p) =>
+        requiredPermission.startsWith(p)
+      );
     },
     [userInfo]
   );

@@ -1,5 +1,6 @@
 import React from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import { FaEdit } from "react-icons/fa";
 
 import "../../pages/AssignmentsPage.css"; // Detay grid stilleri için gerekli

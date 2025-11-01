@@ -82,10 +82,12 @@ const UserCard = ({
           className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-xl font-bold 
           ${roleInfo[user.role]?.className || "bg-light-gray text-text-light"}`}
         >
-          {user.username.charAt(0).toUpperCase() || "?"}
+          {user.personnel?.fullName?.charAt(0).toUpperCase() || "?"}
         </div>
         <div className="flex-grow">
-          <h3 className="font-semibold text-text-main">{user.username}</h3>
+          <h3 className="font-semibold text-text-main">
+            {user.personnel?.fullName || user.email}
+          </h3>
           <div
             className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold 
             ${
@@ -138,10 +140,8 @@ const UserCard = ({
           <span>{user.email}</span>
         </div>
         <div className="flex items-center gap-3 text-sm text-text-light">
-          <MdPhone className="text-secondary" /> <span>{user.phone}</span>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-text-light">
-          <MdWork className="text-secondary" /> <span>{user.position}</span>
+          <MdWork className="text-secondary" />{" "}
+          <span>{user.personnel?.position || "Pozisyon Belirtilmemiş"}</span>
         </div>
         <div className="flex items-center gap-3 text-sm text-text-light">
           <FaCalendarAlt className="text-secondary" />

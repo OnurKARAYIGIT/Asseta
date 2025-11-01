@@ -1,45 +1,59 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "../components/AuthContext";
+import axiosInstance from "../api/axiosInstance";
 
 const SettingsContext = createContext();
 
-const getInitialSettings = () => {
-  try {
-    const storedSettings = localStorage.getItem("appSettings");
-    if (storedSettings) {
-      const parsedSettings = JSON.parse(storedSettings);
-      // Eğer kullanıcı tüm sütunları kaldırdıysa, varsayılanları geri yükle
-      if (
-        !parsedSettings.visibleColumns?.assignments ||
-        parsedSettings.visibleColumns.assignments.length === 0
-      ) {
-        parsedSettings.visibleColumns.assignments = defaultColumns.assignments;
-      }
-      return parsedSettings;
-    }
-  } catch (error) {
-    console.error("Ayarlar okunurken hata oluştu:", error);
-  }
-  // Varsayılan ayarlar
-  return {
-    itemsPerPage: 15,
-    language: "tr",
-    // Yeni eklenen ayar: Varsayılan olarak gösterilecek sütunlar
-    visibleColumns: defaultColumns,
-  };
-};
-
 const defaultColumns = {
   assignments: [
-    "company.name",
+    // Kullanıcının ilk gördüğünde en anlamlı olacak sütunları varsayılan yapalım
+    "personnel.fullName",
     "item.assetType",
     "item.assetTag",
-    "personnelName",
+    "item.brand",
+    "company.name",
     "assignmentDate",
   ],
 };
 
+export const defaultSettings = {
+  itemsPerPage: 15,
+  language: "tr",
+  emailOnNewAssignment: true,
+  emailOnStatusChange: true,
+  visibleColumns: defaultColumns,
+};
+
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState(getInitialSettings);
+  // Başlangıçta varsayılan ayarları kullan, API'dan gelen veri bunu güncelleyecek.
+  const [settings, setSettings] = useState(defaultSettings);
+  const { userInfo } = useAuth();
+
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      if (userInfo) {
+        try {
+          const { data } = await axiosInstance.get("/users/settings");
+          // Kullanıcının kaydettiği ayarları, varsayılanların üzerine "derinlemesine" yaz.
+          const mergedSettings = {
+            ...defaultSettings,
+            ...data,
+            visibleColumns: {
+              ...defaultSettings.visibleColumns,
+              ...data?.visibleColumns,
+            },
+          };
+          setSettings(mergedSettings);
+        } catch (error) {
+          console.error("Kullanıcı ayarları çekilemedi:", error);
+          // Hata durumunda varsayılan ayarlarla devam et
+          setSettings(defaultSettings);
+        }
+      }
+    };
+
+    fetchUserSettings();
+  }, [userInfo]); // Kullanıcı giriş yaptığında veya değiştiğinde ayarları çek
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings }}>

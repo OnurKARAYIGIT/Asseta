@@ -75,7 +75,7 @@ const ProfilePage = () => {
     <div className="page-container">
       <h1>
         <FaUserShield style={{ color: "var(--secondary-color)" }} />{" "}
-        {profileData?.username}
+        {profileData?.personnel?.fullName}
       </h1>
       {isLoading ? (
         <Loader />

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import Button from "../shared/Button";
 
 const ResetPasswordModal = ({ isOpen, onClose, user, onReset }) => {

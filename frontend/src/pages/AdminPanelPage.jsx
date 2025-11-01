@@ -160,7 +160,9 @@ const AdminPanelPage = () => {
         navigate("/login");
       } else {
         toast.success(
-          `"${user.username}" kullanıcısının şifresi başarıyla sıfırlandı.`
+          `"${
+            user.personnel?.fullName || user.email
+          }" kullanıcısının şifresi başarıyla sıfırlandı.`
         );
       }
       return true; // Başarılı olursa modal'a true döndür
@@ -246,6 +248,7 @@ const AdminPanelPage = () => {
         onClose={() => setIsAddUserModalOpen(false)}
         onSubmit={createUserHandler}
         currentUserRole={userInfo.role}
+        existingUsers={users} // Mevcut kullanıcıları prop olarak geçir
       />
       <ConfirmationModal
         isOpen={!!userToDelete}
@@ -256,8 +259,11 @@ const AdminPanelPage = () => {
         title="Kullanıcı Silme Onayı"
       >
         <p>
-          <strong>{userToDelete?.username}</strong> kullanıcısını kalıcı olarak
-          silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+          <strong>
+            {userToDelete?.personnel?.fullName || userToDelete?.email}
+          </strong>{" "}
+          kullanıcısını kalıcı olarak silmek istediğinizden emin misiniz? Bu
+          işlem geri alınamaz.
         </p>
       </ConfirmationModal>
       <ResetPasswordModal

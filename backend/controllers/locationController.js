@@ -34,7 +34,61 @@ const getLocations = asyncHandler(async (req, res) => {
   res.json(locations);
 });
 
+// @desc    Bir konumu günceller
+// @route   PUT /api/locations/:id
+// @access  Private/Admin
+const updateLocation = asyncHandler(async (req, res) => {
+  const { name, address, contact } = req.body;
+  const location = await Location.findById(req.params.id);
+
+  if (location) {
+    location.name = name || location.name;
+    location.address = address || location.address;
+    location.contact = contact || location.contact;
+
+    const updatedLocation = await location.save();
+    await logAction(
+      req.user,
+      "KONUM_GÜNCELLENDİ",
+      `'${updatedLocation.name}' adlı konum güncellendi.`
+    );
+    res.json(updatedLocation);
+  } else {
+    res.status(404);
+    throw new Error("Konum bulunamadı.");
+  }
+});
+
+// @desc    Bir konumu siler
+// @route   DELETE /api/locations/:id
+// @access  Private/Admin
+const deleteLocation = asyncHandler(async (req, res) => {
+  const location = await Location.findById(req.params.id);
+
+  if (location) {
+    // İsteğe bağlı: Bu konuma bağlı zimmet veya eşya olup olmadığını kontrol et
+    // const assignmentExists = await Assignment.findOne({ company: location._id });
+    // if (assignmentExists) {
+    //   res.status(400);
+    //   throw new Error("Bu konuma ait zimmet kayıtları olduğundan silinemez.");
+    // }
+
+    await location.deleteOne();
+    await logAction(
+      req.user,
+      "KONUM_SİLİNDİ",
+      `'${location.name}' adlı konum silindi.`
+    );
+    res.json({ message: "Konum başarıyla silindi." });
+  } else {
+    res.status(404);
+    throw new Error("Konum bulunamadı.");
+  }
+});
+
 module.exports = {
   createLocation,
   getLocations,
+  updateLocation,
+  deleteLocation,
 };

@@ -1,12 +1,13 @@
 const asyncHandler = require("express-async-handler");
 const AuditLog = require("../models/auditLogModel");
 const User = require("../models/userModel");
+const Personnel = require("../models/personnelModel"); // Personnel modelini import et
 
 // @desc    Tüm denetim kayıtlarını getirir
 // @route   GET /api/audit-logs
 // @access  Private/Admin
 const getAuditLogs = asyncHandler(async (req, res) => {
-  const pageSize = Number(req.query.limit) || 15;
+  const pageSize = Number(req.query.limit) || 15; // limit query'sini de destekle
   const page = Number(req.query.page) || 1;
   const { userId, startDate, endDate } = req.query;
   const filter = {};
@@ -24,7 +25,14 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 
   const count = await AuditLog.countDocuments(filter);
   const logs = await AuditLog.find(filter)
-    .populate("user", "username")
+    .populate({
+      path: "user", // user alanını populate et
+      select: "personnel", // user'dan sadece personnel'i seç
+      populate: {
+        path: "personnel", // user.personnel alanını populate et
+        select: "fullName", // personnel'den sadece fullName'i seç
+      },
+    })
     .sort({ createdAt: -1 })
     .limit(pageSize)
     .skip(pageSize * (page - 1));
@@ -37,7 +45,12 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 });
 
 const getAuditLogUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({}).select("username").sort("username");
+  // Artık kullanıcıları personel bilgileriyle birlikte gönderiyoruz
+  const users = await User.find({ personnel: { $ne: null } }) // Sadece personeli olan kullanıcıları getir
+    .populate("personnel", "fullName")
+    .select("personnel")
+    .lean(); // Daha hızlı sorgu için lean() kullan
+
   res.json(users);
 });
 

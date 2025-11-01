@@ -4,18 +4,18 @@ import Button from "../shared/Button";
 
 const AdminToolbar = ({ onAddNewUser }) => {
   return (
+    // Bu bileşen artık sadece araç çubuğu işlevlerini (arama, filtre vb.) içerecek.
+    // Başlık ve "Yeni Ekle" butonu, sayfanın ana düzenine taşındı.
+    // Şimdilik bu bileşen boş kalabilir veya gelecekte eklenecek
+    // arama/filtreleme özellikleri için bir iskelet olarak bırakılabilir.
+    // Bu örnekte, başlık ve butonu doğrudan AdminPage.jsx'e taşıdığımız için
+    // bu bileşenin içeriğini kaldırıyoruz.
+    // Eğer gelecekte bir arama çubuğu eklenirse, buraya eklenecektir.
     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-      <div className="flex items-center gap-4">
-        <FaUsersCog className="text-secondary text-2xl" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
-          Kullanıcı Yönetimi
-        </h1>
-      </div>
-      <div className="w-full sm:w-auto">
-        <Button onClick={onAddNewUser} className="w-full">
-          <FaUserPlus /> Yeni Kullanıcı Ekle
-        </Button>
-      </div>
+      {/* 
+        Örnek: Gelecekte buraya bir arama çubuğu eklenebilir.
+        <input type="text" placeholder="Kullanıcı ara..." className="input-class" />
+      */}
     </div>
   );
 };

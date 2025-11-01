@@ -6,6 +6,7 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
+  FaUndo,
 } from "react-icons/fa";
 import Button from "../shared/Button";
 
@@ -17,6 +18,7 @@ const AssignmentsTable = ({
   handleSort,
   handleRowClick,
   handleSummaryClick,
+  handleReturn,
   handleDelete,
   userInfo,
 }) => {
@@ -91,7 +93,7 @@ const AssignmentsTable = ({
                     );
                   }
                   if (
-                    col.key === "personnelName" ||
+                    col.key === "personnel.fullName" ||
                     col.key === "item.assetTag"
                   ) {
                     return (
@@ -104,10 +106,11 @@ const AssignmentsTable = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSummaryClick(
-                              col.key === "personnelName"
+                              col.key === "personnel.fullName"
                                 ? "personnel"
                                 : "item",
-                              value
+                              value,
+                              assignment.personnel?._id // Personel ID'sini de gönder
                             );
                           }}
                         >
@@ -147,6 +150,15 @@ const AssignmentsTable = ({
                   {(userInfo.role === "admin" ||
                     userInfo.role === "developer") && (
                     <>
+                      <Button
+                        title="İade Al"
+                        onClick={() => handleReturn(assignment)}
+                        variant="success"
+                        size="sm"
+                        disabled={assignment.status !== "Zimmetli"}
+                      >
+                        <FaUndo />
+                      </Button>
                       <Button
                         title="Sil"
                         onClick={() => handleDelete(assignment)}

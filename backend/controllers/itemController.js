@@ -70,6 +70,103 @@ const createItem = asyncHandler(async (req, res) => {
   }
 });
 
+// getItems ve exportItems için ortak aggregation pipeline oluşturan yardımcı fonksiyon
+const buildItemsQueryPipeline = (queryParams) => {
+  const { status, assetType, keyword: keywordQuery } = queryParams;
+
+  const keyword = keywordQuery
+    ? {
+        $or: [
+          { name: { $regex: keywordQuery, $options: "i" } },
+          { brand: { $regex: keywordQuery, $options: "i" } },
+          { assetTag: { $regex: keywordQuery, $options: "i" } },
+          { serialNumber: { $regex: keywordQuery, $options: "i" } },
+          { assetType: { $regex: keywordQuery, $options: "i" } },
+        ],
+      }
+    : {};
+
+  let filter = { ...keyword };
+
+  if (assetType) {
+    filter.assetType = assetType;
+  }
+
+  let pipeline = [];
+
+  if (Object.keys(filter).length > 0) {
+    pipeline.push({ $match: filter });
+  }
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "assignments",
+        localField: "_id",
+        foreignField: "item",
+        as: "assignments",
+      },
+    },
+    {
+      $addFields: {
+        lastAssignment: {
+          $arrayElemAt: [
+            {
+              $sortArray: {
+                input: "$assignments",
+                sortBy: { assignmentDate: -1 },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        assignmentStatus: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: ["$lastAssignment.status", "Zimmetli"] },
+                then: "Zimmetli",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Arızalı"] },
+                then: "Arızalı",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Beklemede"] },
+                then: "Beklemede",
+              },
+              {
+                case: { $eq: ["$lastAssignment.status", "Hurda"] },
+                then: "Hurda",
+              },
+            ],
+            default: "Boşta",
+          },
+        },
+        assignmentId: { $ifNull: ["$lastAssignment._id", null] },
+      },
+    }
+  );
+
+  // Duruma göre filtrele
+  const statusMap = {
+    assigned: "Zimmetli",
+    unassigned: "Boşta",
+    arizali: "Arızalı",
+    beklemede: "Beklemede",
+    hurda: "Hurda",
+  };
+  if (status && statusMap[status]) {
+    pipeline.push({ $match: { assignmentStatus: statusMap[status] } });
+  }
+
+  return pipeline;
+};
+
 // @desc    Tüm eşyaları listeler
 // @route   GET /api/items
 // @access  Private
@@ -77,112 +174,13 @@ const getItems = asyncHandler(async (req, res) => {
   const pageSize = Number(req.query.limit) || 15;
   const page = Number(req.query.page) || 1;
   const status = req.query.status; // 'assigned' veya 'unassigned'
-  const assetType = req.query.assetType;
 
-  const keyword = req.query.keyword
-    ? {
-        $or: [
-          { name: { $regex: req.query.keyword, $options: "i" } },
-          { brand: { $regex: req.query.keyword, $options: "i" } },
-          { assetTag: { $regex: req.query.keyword, $options: "i" } },
-          { serialNumber: { $regex: req.query.keyword, $options: "i" } },
-          { assetType: { $regex: req.query.keyword, $options: "i" } },
-        ],
-      }
-    : {};
-
-  let filter = { ...keyword };
-
-  // Varlık Cinsi filtresini ekle
-  if (assetType) {
-    filter.assetType = assetType;
-  }
-
-  // Aggregation pipeline kullanarak eşyaları ve zimmet durumlarını tek sorguda birleştir
-  let pipeline = [];
-
-  // Arama ve Varlık Cinsi filtresi
-  if (Object.keys(filter).length > 0) {
-    pipeline.push({ $match: filter });
-  }
-
-  // Zimmet bilgilerini ekle
-  pipeline.push({
-    $lookup: {
-      from: "assignments",
-      localField: "_id",
-      foreignField: "item",
-      as: "assignments",
-    },
-  });
-
-  // Her eşya için en son zimmet durumunu bul
-  pipeline.push({
-    $addFields: {
-      // Zimmetleri tarihe göre tersten sıralayıp ilkini alarak en son zimmeti bul
-      lastAssignment: {
-        $arrayElemAt: [
-          {
-            $sortArray: {
-              input: "$assignments",
-              sortBy: { assignmentDate: -1 },
-            },
-          },
-          0,
-        ],
-      },
-    },
-  });
-
-  // Durum bilgisini ata
-  pipeline.push({
-    $addFields: {
-      assignmentStatus: {
-        $switch: {
-          branches: [
-            {
-              case: { $eq: ["$lastAssignment.status", "Zimmetli"] },
-              then: "Zimmetli",
-            },
-            {
-              case: { $eq: ["$lastAssignment.status", "Arızalı"] },
-              then: "Arızalı",
-            },
-            {
-              case: { $eq: ["$lastAssignment.status", "Beklemede"] },
-              then: "Beklemede",
-            },
-            {
-              case: { $eq: ["$lastAssignment.status", "Hurda"] },
-              then: "Hurda",
-            },
-            // İade Edildi, Hurda veya hiç zimmetlenmemişse "Boşta" sayılır
-          ],
-          default: "Boşta",
-        },
-      },
-      assignmentId: { $ifNull: ["$lastAssignment._id", null] },
-    },
-  });
-
-  // Duruma göre filtrele
-  if (status) {
-    // Frontend'den gelen kısa anahtar kelimeleri veritabanı durumlarına çevir
-    const statusMap = {
-      assigned: "Zimmetli",
-      unassigned: "Boşta",
-      arizali: "Arızalı",
-      beklemede: "Beklemede",
-      hurda: "Hurda",
-    };
-    if (statusMap[status]) {
-      pipeline.push({ $match: { assignmentStatus: statusMap[status] } });
-    }
-  }
+  // Ortak pipeline'ı oluştur
+  const basePipeline = buildItemsQueryPipeline(req.query);
 
   // Toplam sayıyı ve sayfalama sonuçlarını almak için $facet kullan
   const facetPipeline = [
-    ...pipeline,
+    ...basePipeline,
     {
       $facet: {
         metadata: [{ $count: "total" }],
@@ -296,97 +294,8 @@ const checkUniqueness = asyncHandler(async (req, res) => {
 // @route   GET /api/items/export
 // @access  Private
 const exportItems = asyncHandler(async (req, res) => {
-  // getItems ile aynı filtreleme mantığını kullanıyoruz
-  const status = req.query.status;
-  const assetType = req.query.assetType;
-  const keyword = req.query.keyword
-    ? {
-        $or: [
-          { name: { $regex: req.query.keyword, $options: "i" } },
-          { brand: { $regex: req.query.keyword, $options: "i" } },
-          { assetTag: { $regex: req.query.keyword, $options: "i" } },
-          { serialNumber: { $regex: req.query.keyword, $options: "i" } },
-          { assetType: { $regex: req.query.keyword, $options: "i" } },
-        ],
-      }
-    : {};
-
-  let filter = { ...keyword };
-  if (assetType) {
-    filter.assetType = assetType;
-  }
-
-  // getItems ile aynı agregasyon pipeline'ını kullanıyoruz, ancak sayfalama olmadan.
-  let pipeline = [];
-  if (Object.keys(filter).length > 0) {
-    pipeline.push({ $match: filter });
-  }
-  pipeline.push(
-    {
-      $lookup: {
-        from: "assignments",
-        localField: "_id",
-        foreignField: "item",
-        as: "assignments",
-      },
-    },
-    {
-      $addFields: {
-        lastAssignment: {
-          $arrayElemAt: [
-            {
-              $sortArray: {
-                input: "$assignments",
-                sortBy: { assignmentDate: -1 },
-              },
-            },
-            0,
-          ],
-        },
-      },
-    },
-    {
-      $addFields: {
-        assignmentStatus: {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$lastAssignment.status", "Zimmetli"] },
-                then: "Zimmetli",
-              },
-              {
-                case: { $eq: ["$lastAssignment.status", "Arızalı"] },
-                then: "Arızalı",
-              },
-              {
-                case: { $eq: ["$lastAssignment.status", "Beklemede"] },
-                then: "Beklemede",
-              },
-              {
-                case: { $eq: ["$lastAssignment.status", "Hurda"] },
-                then: "Hurda",
-              },
-            ],
-            default: "Boşta",
-          },
-        },
-      },
-    }
-  );
-
-  if (status) {
-    const statusMap = {
-      assigned: "Zimmetli",
-      unassigned: "Boşta",
-      arizali: "Arızalı",
-      beklemede: "Beklemede",
-      hurda: "Hurda",
-    };
-    if (statusMap[status]) {
-      pipeline.push({ $match: { assignmentStatus: statusMap[status] } });
-    }
-  }
-
+  // Ortak pipeline'ı oluştur (sayfalama olmadan)
+  const pipeline = buildItemsQueryPipeline(req.query);
   const items = await Item.aggregate(pipeline);
 
   // Excel için veriyi formatla

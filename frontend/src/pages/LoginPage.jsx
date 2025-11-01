@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
 import Loader from "../components/Loader";
-import { FaUser, FaLock } from "react-icons/fa";
+import { FaUser, FaLock, FaIdCard } from "react-icons/fa"; // FaIdCard ikonunu ekledik
 import logoAsseta from "../assets/logo.svg";
 import "./LoginPage.css";
 import axiosInstance from "../api/axiosInstance";
 import { history } from "../history";
+import { FaEnvelope } from "react-icons/fa"; // E-posta ikonu
 
 const LoginPage = () => {
-  const { userInfo, loginSuccess } = useAuth();
+  const { userInfo, login, loading: authLoading } = useAuth(); // Artık context'ten gelen login ve loading'i kullanacağız
   const location = useLocation();
 
   // React Hook Form kurulumu
@@ -21,28 +21,6 @@ const LoginPage = () => {
     handleSubmit,
     formState: { errors },
   } = useForm();
-
-  // React Query ile login mutation'ı
-  const { mutate: login, isLoading } = useMutation({
-    mutationFn: ({ username, password }) =>
-      axiosInstance.post(
-        "/users/login",
-        { username, password },
-        { withCredentials: true } // <-- Cookie’lerin tarayıcıya kaydedilmesini sağlar
-      ),
-    onSuccess: (response) => {
-      // Eğer backend, kullanıcı bilgilerini response.body içinde döndürüyorsa
-      // AuthContext'i güncelle ve yönlendir
-      response.data.token = document.cookie.split(";")[0].split("=")[1];
-      loginSuccess(response.data);
-      toast.success("Giriş başarılı!");
-    },
-    onError: (err) => {
-      const message =
-        err.response?.data?.message || "Giriş sırasında bir hata oluştu.";
-      toast.error(message);
-    },
-  });
 
   // Eğer kullanıcı zaten giriş yapmışsa, onu doğrudan dashboard'a yönlendir.
   // Bu, /login sayfasına tekrar erişmeye çalıştığında /no-access'e gitmesini engeller.
@@ -54,8 +32,8 @@ const LoginPage = () => {
   }, [userInfo, location.pathname]);
 
   // Form gönderimini ele alan fonksiyon
-  const onSubmit = (data) => {
-    login(data);
+  const onSubmit = async (data) => {
+    await login(data.username, data.password); // AuthContext'teki login fonksiyonunu çağır
   };
 
   return (
@@ -72,16 +50,16 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Kullanıcı Adı</label>
+            <label htmlFor="username">Sicil Numarası</label>
             <div className="input-wrapper">
-              <FaUser className="input-icon" />
+              <FaIdCard className="input-icon" />
               <input
                 type="text"
                 id="username"
                 {...register("username", {
-                  required: "Kullanıcı adı zorunludur.",
+                  required: "Sicil numarası zorunludur.",
                 })}
-                placeholder="Kullanıcı adınızı girin"
+                placeholder="Sicil numaranızı girin"
               />
             </div>
             {errors.username && (
@@ -106,9 +84,9 @@ const LoginPage = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={isLoading}
+            disabled={authLoading}
           >
-            {isLoading ? <Loader size="sm" /> : "Giriş Yap"}
+            {authLoading ? <Loader size="sm" /> : "Giriş Yap"}
           </button>
         </form>
       </div>

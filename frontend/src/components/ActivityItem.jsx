@@ -13,7 +13,7 @@ const formatDate = (dateString) => {
 
 const ActivityItem = ({ assignment }) => {
   // Gerekli verileri assignment objesinden ayrıştıralım
-  const { _id, item, personnelName, createdAt } = assignment;
+  const { _id, item, personnel, createdAt } = assignment;
 
   return (
     <li>
@@ -23,7 +23,8 @@ const ActivityItem = ({ assignment }) => {
             {item?.name || "Silinmiş Eşya"}
           </span>
           <span className="activity-personnel">
-            {personnelName} personeline zimmetlendi.
+            {personnel?.fullName || "Bilinmeyen Personel"} personeline
+            zimmetlendi.
           </span>
         </div>
         <span className="activity-date">{formatDate(createdAt)}</span>

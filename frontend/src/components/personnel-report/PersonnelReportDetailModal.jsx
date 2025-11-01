@@ -1,5 +1,6 @@
 import React from "react";
-import Modal from "../Modal";
+import Modal from "../shared/Modal.jsx";
+
 import { FaEdit, FaTrash } from "react-icons/fa";
 
 const PersonnelReportDetailModal = ({
