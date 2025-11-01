@@ -29,6 +29,7 @@ const getAuditLogs = asyncHandler(async (req, res) => {
       path: "user", // user alanını populate et
       select: "personnel", // user'dan sadece personnel'i seç
       populate: {
+        // iç içe populate
         path: "personnel", // user.personnel alanını populate et
         select: "fullName", // personnel'den sadece fullName'i seç
       },

@@ -49,7 +49,7 @@ const registerUser = asyncHandler(async (req, res) => {
     await personnel.save();
 
     await logAction(
-      user, // Logu oluşturan kullanıcı (kendisi)
+      req, // IP adresi için req nesnesini ekle
       "KULLANICI_KAYDI",
       `'${personnel.fullName}' personeli için yeni bir kullanıcı hesabı oluşturuldu.`
     );
@@ -74,14 +74,14 @@ const refreshToken = asyncHandler(async (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-    const newAccessToken = generateToken(decoded.id, "15m");
+    const newAccessToken = generateToken(decoded.id, "60m");
 
     // Yeni access token'ı hem cookie'ye yaz hem de response olarak dön
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
       sameSite: "strict",
-      maxAge: 15 * 60 * 1000,
+      maxAge: 60 * 60 * 1000, // 60 dakika
     });
 
     res.status(200).json({ accessToken: newAccessToken });
@@ -110,19 +110,22 @@ const loginUser = asyncHandler(async (req, res) => {
       user.lastSeen = new Date();
       await user.save();
 
+      // Loglama fonksiyonunun doğru kullanıcıyı bulabilmesi için req.user'ı manuel olarak ayarla
+      req.user = user;
+
       await logAction(
-        user, // Logu oluşturan kullanıcı (kendisi)
+        req, // IP adresi için req nesnesini ekle
         "KULLANICI_GİRİŞİ",
         // Artık personel ismini kullanıyoruz
         `'${user.personnel.fullName}' kullanıcısı sisteme giriş yaptı.`
       );
 
       // Token'ları httpOnly cookie olarak ayarla
-      res.cookie("accessToken", generateToken(user._id, "15m"), {
+      res.cookie("accessToken", generateToken(user._id, "1h"), {
         httpOnly: true,
         secure: process.env.NODE_ENV !== "development",
         sameSite: "strict",
-        maxAge: 15 * 60 * 1000,
+        maxAge: 60 * 60 * 1000,
       });
       res.cookie("refreshToken", generateToken(user._id, "7d"), {
         httpOnly: true,
@@ -138,7 +141,7 @@ const loginUser = asyncHandler(async (req, res) => {
         role: user.role,
         permissions: user.permissions,
         // Token'ları localStorage için de gönder
-        accessToken: generateToken(user._id, "15m"),
+        accessToken: generateToken(user._id, "60m"),
         refreshToken: generateToken(user._id, "7d"),
       });
     } else {
@@ -217,7 +220,7 @@ const updateUserPassword = asyncHandler(async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
     await logAction(
-      user,
+      req, // IP adresi için req nesnesini ekle
       "KENDİ_ŞİFRESİNİ_GÜNCELLEDİ",
       "Kullanıcı kendi şifresini güncelledi."
     );

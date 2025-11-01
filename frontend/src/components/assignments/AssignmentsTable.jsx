@@ -1,12 +1,12 @@
 import React from "react";
 import {
-  FaTrash,
-  FaHistory,
-  FaFileDownload,
   FaSort,
   FaSortUp,
   FaSortDown,
   FaUndo,
+  FaTrashAlt,
+  FaHistory,
+  FaTrash,
 } from "react-icons/fa";
 import Button from "../shared/Button";
 
@@ -17,9 +17,8 @@ const AssignmentsTable = ({
   sortConfig,
   handleSort,
   handleRowClick,
-  handleSummaryClick,
-  handleReturn,
-  handleDelete,
+  handleReturn, // Bu prop artık kullanılmıyor olabilir, ama şimdilik kalsın
+  handleDelete, // Bu prop artık kullanılmıyor olabilir, ama şimdilik kalsın
   userInfo,
 }) => {
   const getSortIcon = (key) => {
@@ -74,7 +73,7 @@ const AssignmentsTable = ({
             <tr
               key={assignment._id}
               onClick={() => handleRowClick(assignment)}
-              className="hover:bg-background cursor-pointer transition-colors"
+              className="cursor-pointer transition-colors hover:bg-light-gray-color dark:hover:bg-light-gray-color"
             >
               {columns
                 .filter((col) => visibleColumns.includes(col.key))
@@ -84,7 +83,7 @@ const AssignmentsTable = ({
                     return (
                       <td
                         key={col.key}
-                        className="px-4 py-3 whitespace-nowrap text-sm"
+                        className="px-4 py-3 whitespace-nowrap text-sm text-text-main"
                       >
                         {value
                           ? new Date(value).toLocaleDateString("tr-TR")
@@ -92,37 +91,10 @@ const AssignmentsTable = ({
                       </td>
                     );
                   }
-                  if (
-                    col.key === "personnel.fullName" ||
-                    col.key === "item.assetTag"
-                  ) {
-                    return (
-                      <td
-                        key={col.key}
-                        className="px-4 py-3 whitespace-nowrap text-sm"
-                      >
-                        <span
-                          className="text-primary hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSummaryClick(
-                              col.key === "personnel.fullName"
-                                ? "personnel"
-                                : "item",
-                              value,
-                              assignment.personnel?._id // Personel ID'sini de gönder
-                            );
-                          }}
-                        >
-                          {value || "-"}
-                        </span>
-                      </td>
-                    );
-                  }
                   return (
                     <td
                       key={col.key}
-                      className="px-4 py-3 whitespace-nowrap text-sm"
+                      className="px-4 py-3 whitespace-nowrap text-sm text-text-main"
                     >
                       {value || "-"}
                     </td>
@@ -144,40 +116,35 @@ const AssignmentsTable = ({
               </td>
               <td
                 onClick={(e) => e.stopPropagation()}
-                className="px-4 py-3 whitespace-nowrap text-sm"
+                className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex justify-end items-center gap-2">
                   {(userInfo.role === "admin" ||
                     userInfo.role === "developer") && (
                     <>
-                      <Button
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReturn(assignment);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-white text-xs font-semibold bg-green-600 hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                         title="İade Al"
-                        onClick={() => handleReturn(assignment)}
-                        variant="success"
-                        size="sm"
                         disabled={assignment.status !== "Zimmetli"}
                       >
                         <FaUndo />
-                      </Button>
-                      <Button
-                        title="Sil"
-                        onClick={() => handleDelete(assignment)}
-                        variant="danger"
-                        size="sm"
-                      >
-                        <FaTrash />
-                      </Button>
-                      <Button
-                        title="Geçmişi Görüntüle"
+                        <span>İade Al</span>
+                      </button>
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRowClick(assignment);
+                          handleDelete(assignment);
                         }}
-                        variant="secondary"
-                        size="sm"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-white text-xs font-semibold bg-red-600 hover:bg-red-700 transition-colors"
+                        title="Sil"
                       >
-                        <FaHistory />
-                      </Button>
+                        <FaTrashAlt />
+                        <span>Sil</span>
+                      </button>
                     </>
                   )}
                 </div>

@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axiosInstance from "../api/axiosInstance";
+import axiosInstance from "../../api/axiosInstance";
 import { toast } from "react-toastify";
-import Loader from "../components/Loader";
-import PendingAssignmentsHeader from "../components/pending-assigments/PendingAssignmentsHeader";
-import Pagination from "../components/shared/Pagination";
-import PersonnelAssignmentAccordion from "../components/pending-assigments/PersonnelAssignmentAccordion";
-import ConfirmationModal from "../components/shared/ConfirmationModal";
-import { usePendingCount } from "../contexts/PendingCountContext";
-import UploadApprovalFormModal from "../components/pending-assigments/UploadApprovalFormModal";
+
+import Loader from "../Loader";
+import PendingAssignmentsHeader from "./PendingAssignmentsHeader";
+import PendingAssignmentsToolbar from "./PendingAssignmentsToolbar";
+import PendingAssignmentCard from "./PendingAssignmentCard";
+import Pagination from "../shared/Pagination"; // Bu yol zaten doğru
+import ConfirmationModal from "../shared/ConfirmationModal"; // Bu yol zaten doğru
+import { usePendingCount } from "../../contexts/PendingCountContext";
 
 const PendingAssignmentsPage = () => {
   const queryClient = useQueryClient();
@@ -16,8 +17,8 @@ const PendingAssignmentsPage = () => {
 
   // State'ler
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPersonnelIds, setSelectedPersonnelIds] = useState(new Set());
   const [actionToConfirm, setActionToConfirm] = useState(null); // { action: 'approve' | 'reject', ids: [...] }
-  const [uploadInfo, setUploadInfo] = useState(null); // { personnelId, personnelName }
 
   // Veri Çekme - Sayfalama mantığı eklendi
   const { data, isLoading, isError, error } = useQuery({
@@ -38,6 +39,8 @@ const PendingAssignmentsPage = () => {
 
   // Veri Değiştirme (Mutations)
   const invalidateAndRefetch = () => {
+    // Seçimleri temizle ve mevcut sayfayı yeniden yükle
+    setSelectedPersonnelIds(new Set());
     queryClient.invalidateQueries({ queryKey: ["pending-assignments"] });
     queryClient.invalidateQueries({ queryKey: ["assignments"] });
     refetchPendingCount();
@@ -45,10 +48,7 @@ const PendingAssignmentsPage = () => {
 
   const approveMutation = useMutation({
     mutationFn: (assignmentIds) =>
-      axiosInstance.put("/assignments/approve-multiple", {
-        assignmentIds,
-        formPath: actionToConfirm.formPath, // Onaylama işlemine dosya yolunu ekle
-      }),
+      axiosInstance.put("/assignments/approve-multiple", { assignmentIds }),
     onSuccess: () => {
       toast.success("Seçilen zimmetler başarıyla onaylandı.");
       invalidateAndRefetch();
@@ -68,34 +68,44 @@ const PendingAssignmentsPage = () => {
       toast.error(err.response?.data?.message || "Reddetme işlemi başarısız."),
   });
 
-  // Dosya Yükleme
-  const uploadMutation = useMutation({
-    mutationFn: (file) => {
-      const formData = new FormData();
-      formData.append("form", file);
-      return axiosInstance.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+  // Olay Yöneticileri (Event Handlers)
+  const handleSelectionChange = (personnelId, isSelected) => {
+    setSelectedPersonnelIds((prev) => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(personnelId);
+      } else {
+        newSet.delete(personnelId);
+      }
+      return newSet;
+    });
+  };
+
+  const getAssignmentIdsFromSelection = () => {
+    return groupedAssignments
+      .filter((group) => selectedPersonnelIds.has(group._id))
+      .flatMap((group) => group.assignments.map((a) => a._id));
+  };
+
+  const handleApproveSelected = () => {
+    const idsToApprove = getAssignmentIdsFromSelection();
+    if (idsToApprove.length > 0) {
+      setActionToConfirm({
+        action: "approve",
+        ids: idsToApprove,
+        type: "seçilen",
       });
-    },
-  });
+    }
+  };
 
-  const handleUploadAndApprove = async (file) => {
-    if (!uploadInfo) return;
-    try {
-      // 1. Dosyayı yükle
-      const uploadResult = await uploadMutation.mutateAsync(file);
-      const formPath = uploadResult.data.filePath;
-
-      // 2. Onaylama işlemini başlat
-      const group = groupedAssignments.find(
-        (g) => g._id === uploadInfo.personnelId
-      );
-      const idsToApprove = group.assignments.map((a) => a._id);
-      approveMutation.mutate({ assignmentIds: idsToApprove, formPath });
-
-      setUploadInfo(null); // Modalı kapat
-    } catch (error) {
-      toast.error("Dosya yüklenirken veya onaylama sırasında bir hata oluştu.");
+  const handleRejectSelected = () => {
+    const idsToReject = getAssignmentIdsFromSelection();
+    if (idsToReject.length > 0) {
+      setActionToConfirm({
+        action: "reject",
+        ids: idsToReject,
+        type: "seçilen",
+      });
     }
   };
 
@@ -103,12 +113,12 @@ const PendingAssignmentsPage = () => {
     if (!actionToConfirm) return;
     const { action, ids } = actionToConfirm;
     if (action === "approve") {
-      // Bu akış artık kullanılmıyor, handleUploadAndApprove üzerinden yapılıyor.
-      // approveMutation.mutate(ids);
+      approveMutation.mutate(ids);
     } else if (action === "reject") {
       rejectMutation.mutate(ids);
     }
     setActionToConfirm(null);
+    setSelectedPersonnelIds(new Set()); // İşlem sonrası seçimi temizle
   };
 
   if (isLoading) {
@@ -124,22 +134,28 @@ const PendingAssignmentsPage = () => {
   }
 
   return (
-    // Diğer sayfalarla tutarlı bir görünüm için ana kapsayıcı div'i ve standart sınıfları ekliyoruz.
-    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
+    <div className="p-6 sm:p-8">
       <PendingAssignmentsHeader totalItems={totalItems} />
       {groupedAssignments.length > 0 ? (
         <>
+          <PendingAssignmentsToolbar
+            onApproveSelected={handleApproveSelected}
+            onRejectSelected={handleRejectSelected}
+            selectedCount={selectedPersonnelIds.size}
+          />
           <div className="space-y-4">
             {groupedAssignments.map((group) => (
-              <PersonnelAssignmentAccordion
+              <PendingAssignmentCard
                 key={group.personnel?._id || group._id}
                 group={group}
-                onUploadAndApprove={(personnelId, personnelName) =>
-                  setUploadInfo({ personnelId, personnelName })
+                onApprove={(ids) =>
+                  setActionToConfirm({ action: "approve", ids, type: "tümü" })
                 }
                 onReject={(ids) =>
                   setActionToConfirm({ action: "reject", ids, type: "tümü" })
                 }
+                isSelected={selectedPersonnelIds.has(group._id)}
+                onSelectionChange={handleSelectionChange}
               />
             ))}
           </div>
@@ -155,13 +171,6 @@ const PendingAssignmentsPage = () => {
           Onay bekleyen zimmet bulunmamaktadır.
         </p>
       )}
-
-      <UploadApprovalFormModal
-        isOpen={!!uploadInfo}
-        onClose={() => setUploadInfo(null)}
-        onUpload={handleUploadAndApprove}
-        personnelName={uploadInfo?.personnelName}
-      />
 
       <ConfirmationModal
         isOpen={!!actionToConfirm}

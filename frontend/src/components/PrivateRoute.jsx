@@ -3,12 +3,14 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 const PrivateRoute = ({ children, requiredPermission }) => {
-  const { userInfo, hasPermission } = useAuth(); // hasPermission fonksiyonunu context'ten al
+  const { userInfo, loading, hasPermission } = useAuth();
   const location = useLocation();
 
+  // Eğer auth durumu henüz yüklenmediyse, yönlendirme yapma — bekle
+  if (loading) return null; // veya bir Loader bileşeni gösterilebilir
+
+  // Kullanıcı bilgisi yoksa ve localStorage'da da token yoksa, login sayfasına yönlendir
   if (!userInfo) {
-    // Kullanıcı giriş yapmamışsa, onu login sayfasına yönlendir.
-    // Nereden geldiğini de state olarak gönder ki, giriş yaptıktan sonra geri dönebilsin.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

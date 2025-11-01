@@ -147,7 +147,8 @@ const getAssignments = asyncHandler(async (req, res) => {
   if (req.query.status) {
     filter.status = req.query.status;
   } else {
-    filter.status = { $ne: "Beklemede" };
+    // Varsayılan olarak sadece "Zimmetli" olanları göster. Kullanıcının geri bildirimi üzerine değiştirildi.
+    filter.status = "Zimmetli";
   }
 
   // Arama terimi (keyword) filtresi
@@ -192,34 +193,37 @@ const getAssignments = asyncHandler(async (req, res) => {
   ];
 
   // YENİ: Konum filtresini, company bilgileri eklendikten SONRA uygula
-  if (req.query.location) {
-    if (mongoose.Types.ObjectId.isValid(req.query.location)) {
-      pipeline.push({
-        $match: {
-          "company._id": new mongoose.Types.ObjectId(req.query.location),
-        },
-      });
-    }
+  // Bu filtre artık en baştaki 'filter' objesine eklendiği için daha verimli çalışacak.
+  if (
+    req.query.location &&
+    mongoose.Types.ObjectId.isValid(req.query.location)
+  ) {
+    // Ana 'filter' objesine company ID'sini ekle.
+    // Bu, lookup işleminden önce filtreleme yaparak performansı artırır.
+    filter.company = new mongoose.Types.ObjectId(req.query.location);
   }
 
   // 6. Eğer keyword varsa, item alanlarını da içeren ek bir $match uygula
   const keyword = req.query.keyword;
   if (keyword && keyword.trim() !== "") {
-    const regex = { $regex: keyword, $options: "i" };
-    pipeline.push({
-      $match: {
-        $or: [
-          { "personnel.fullName": regex }, // personnelName yerine
-          { unit: regex },
-          { location: regex },
-          { "item.name": regex },
-          { "item.assetTag": regex },
-          { "item.serialNumber": regex },
-          { "item.brand": regex },
-          { "personnel.employeeId": regex }, // Sicil no ile arama
-        ],
-      },
-    });
+    const searchRegex = { $regex: keyword, $options: "i" };
+    const searchFilter = {
+      $or: [
+        { "personnel.fullName": searchRegex },
+        { unit: searchRegex },
+        { location: searchRegex },
+        { "item.name": searchRegex },
+        { "item.assetTag": searchRegex },
+        { "item.serialNumber": searchRegex },
+        { "item.brand": searchRegex },
+        { "personnel.employeeId": searchRegex },
+      ],
+    };
+
+    // Arama filtresini, mevcut durum filtresiyle birleştirerek uygula.
+    // Bu, arama yapıldığında bile durum filtresinin (örn: sadece "Zimmetli") korunmasını sağlar.
+    const combinedFilter = { $and: [filter, searchFilter] };
+    pipeline[pipeline.length - 1] = { $match: combinedFilter }; // Önceki $match'i bununla değiştir.
   }
 
   // Sayfalama ve sonuçları almak için $facet kullan
@@ -432,15 +436,14 @@ const getPendingGroupedAssignments = asyncHandler(async (req, res) => {
     // 4. Personel'e göre grupla
     {
       $group: {
-        _id: "$personnel", // Personel ObjectId'sine göre grupla
-        personnelName: { $first: "$personnelInfo.fullName" }, // Personel adını al
-        personnelId: { $first: "$personnelInfo._id" }, // Personel ID'sini al
+        _id: "$personnel",
+        personnel: { $first: "$personnelInfo" },
         assignments: { $push: "$$ROOT" }, // Grubun tüm zimmetlerini bir diziye ekle
         count: { $sum: 1 }, // Her gruptaki zimmet sayısını say
       },
     },
     // 5. Sonuçları personel adına göre sırala
-    { $sort: { personnelName: 1 } },
+    { $sort: { "personnel.fullName": 1 } },
     // 6. Sayfalama için $facet kullan
     {
       $facet: {
@@ -1174,6 +1177,78 @@ const printBatchAssignmentForm = asyncHandler(async (req, res) => {
       mainFont = "DejaVu";
     }
 
+    // --- YARDIMCI FONKSİYONLAR (Tekli yazdırma ile aynı) ---
+    const drawHeader = (doc, assignment) => {
+      const headerY = 45;
+      const logoPath = path.join(__dirname, "../assets/images/logo.png");
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, headerY, { width: 100 });
+      }
+      doc
+        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
+        .fontSize(18)
+        .text("ZİMMET TESLİM TUTANAĞI", 50, headerY + 15, { align: "right" });
+      doc.font(mainFont).fontSize(9);
+      doc.text(`Belge No: ${assignment._id}`, { align: "right" });
+      doc.text(`Tarih: ${new Date().toLocaleDateString("tr-TR")}`, {
+        align: "right",
+      });
+      doc
+        .moveTo(50, headerY + 60)
+        .lineTo(550, headerY + 60)
+        .strokeColor("#dddddd")
+        .stroke();
+    };
+
+    const drawTableRow = (doc, y, label, value) => {
+      doc
+        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
+        .fontSize(9)
+        .fillColor("#333333")
+        .text(label, 70, y);
+      doc
+        .font(mainFont)
+        .fontSize(10)
+        .fillColor("#000000")
+        .text(value || "-", 200, y);
+    };
+
+    const drawSection = (doc, y, title, data) => {
+      doc
+        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
+        .fontSize(11)
+        .fillColor("#0056b3")
+        .text(title, 50, y);
+      doc
+        .moveTo(50, y + 18)
+        .lineTo(550, y + 18)
+        .strokeColor("#0056b3")
+        .stroke();
+      let currentY = y + 30;
+      data.forEach((item) => {
+        drawTableRow(doc, currentY, item.label, item.value);
+        currentY += 20;
+      });
+      return currentY;
+    };
+
+    const drawFooter = (doc, assignment) => {
+      const pageHeight = doc.page.height;
+      doc
+        .fontSize(8)
+        .font(mainFont)
+        .fillColor("#999999")
+        .text(
+          `${
+            assignment.company?.name || "Bilinmeyen Konum"
+          } | Bu belge Asseta Varlık Yönetim Sistemi tarafından oluşturulmuştur.`,
+          50,
+          pageHeight - 40,
+          { align: "center", lineBreak: false }
+        );
+    };
+    // --- YARDIMCI FONKSİYONLAR SONU ---
+
     // Her bir zimmet için ayrı bir sayfa oluştur
     assignments.forEach((assignment, index) => {
       if (index > 0) {
@@ -1182,67 +1257,48 @@ const printBatchAssignmentForm = asyncHandler(async (req, res) => {
 
       const { personnel, item, company } = assignment;
 
-      // Başlık
-      doc
-        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
-        .fontSize(18)
-        .text("ZİMMET TESLİM TUTANAĞI", { align: "center" });
-      doc.moveDown();
+      drawHeader(doc, assignment);
+      let currentY = 140;
 
-      // Personel Bilgileri
-      doc
-        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
-        .fontSize(12)
-        .text("Personel Bilgileri", { underline: true });
-      doc.moveDown(0.5);
-      doc
-        .font(mainFont)
-        .fontSize(10)
-        .text(`Adı Soyadı: ${personnel ? personnel.fullName : "Bilinmiyor"}`)
-        .text(`Sicil No: ${personnel ? personnel.employeeId : "Bilinmiyor"}`)
-        .text(`Departman: ${personnel ? personnel.department : "Bilinmiyor"}`)
-        .text(`Tarih: ${new Date().toLocaleDateString("tr-TR")}`);
-      doc.moveDown();
+      const personnelInfo = [
+        { label: "Adı Soyadı", value: personnel?.fullName },
+        { label: "Sicil Numarası", value: personnel?.employeeId },
+        { label: "Departman", value: personnel?.department },
+        { label: "Görevi / Unvanı", value: personnel?.position },
+      ];
+      currentY = drawSection(
+        doc,
+        currentY,
+        "TESLİM ALAN PERSONEL BİLGİLERİ",
+        personnelInfo
+      );
 
-      // Eşya Tablosu Başlıkları
-      const tableTop = doc.y;
-      const col1 = 50,
-        col2 = 200,
-        col3 = 350,
-        col4 = 450;
-      doc
-        .font(mainFont === "DejaVu" ? "DejaVu" : "Helvetica-Bold")
-        .fontSize(10);
-      doc.text("Eşya Adı", col1, tableTop);
-      doc.text("Marka", col2, tableTop);
-      doc.text("Demirbaş No", col3, tableTop);
-      doc.text("Seri No", col4, tableTop);
-      doc
-        .moveTo(col1, tableTop + 15)
-        .lineTo(550, tableTop + 15)
-        .stroke();
-      doc.moveDown();
-
-      // Eşya Bilgisi
-      doc.font(mainFont).fontSize(9);
-      doc.text(item ? item.name : "-", col1, doc.y, {
-        width: col2 - col1 - 10,
-      });
-      doc.text(item ? item.brand : "-", col2, doc.y, {
-        width: col3 - col2 - 10,
-      });
-      doc.text(item ? item.assetTag : "-", col3, doc.y, {
-        width: col4 - col3 - 10,
-      });
-      doc.text(item ? item.serialNumber : "-", col4, doc.y);
-      doc.moveDown(2);
+      currentY += 20;
+      const itemInfo = [
+        { label: "Malzeme Adı", value: item?.name },
+        { label: "Marka / Model", value: item?.brand },
+        { label: "Demirbaş Numarası", value: item?.assetTag },
+        { label: "Seri Numarası", value: item?.serialNumber },
+        {
+          label: "Zimmet Tarihi",
+          value: assignment.assignmentDate
+            ? new Date(assignment.assignmentDate).toLocaleDateString("tr-TR")
+            : "Belirtilmemiş",
+        },
+      ];
+      currentY = drawSection(
+        doc,
+        currentY,
+        "ZİMMETLENEN MALZEME BİLGİLERİ",
+        itemInfo
+      );
 
       // Teslim Metni
       doc.font(mainFont).fontSize(9).fillColor("#444444");
       doc.text(
         "Yukarıda detayları belirtilen malzemeyi, tüm aksesuarları ile birlikte sağlam, çalışır ve eksiksiz bir şekilde teslim aldım. Bu malzemenin kullanımından ve muhafazasından sorumlu olduğumu, görevimden ayrılmam veya zimmet değişikliği durumunda aynı şekilde eksiksiz olarak iade edeceğimi kabul ve beyan ederim.",
         50,
-        doc.y,
+        currentY + 20,
         { align: "justify", width: 500 }
       );
 
@@ -1281,17 +1337,7 @@ const printBatchAssignmentForm = asyncHandler(async (req, res) => {
         .stroke();
 
       // Footer (Alt Bilgi)
-      const pageHeight = doc.page.height;
-      doc
-        .fontSize(8)
-        .font(mainFont)
-        .fillColor("#999999")
-        .text(
-          `Bu belge Asseta Varlık Yönetim Sistemi tarafından oluşturulmuştur.`,
-          50,
-          pageHeight - 40,
-          { align: "center", lineBreak: false }
-        );
+      drawFooter(doc, assignment);
     });
 
     doc.end();
@@ -1302,6 +1348,104 @@ const printBatchAssignmentForm = asyncHandler(async (req, res) => {
       error: error.message,
     });
   }
+});
+
+// @desc    Birden çok zimmeti onaylar
+// @route   PUT /api/assignments/approve-multiple
+// @access  Private/Admin
+const approveMultipleAssignments = asyncHandler(async (req, res) => {
+  const { assignmentIds } = req.body;
+
+  if (
+    !assignmentIds ||
+    !Array.isArray(assignmentIds) ||
+    assignmentIds.length === 0
+  ) {
+    res.status(400);
+    throw new Error("Onaylanacak zimmet ID'leri bulunamadı.");
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const updatedAssignments = await Assignment.updateMany(
+      { _id: { $in: assignmentIds }, status: "Beklemede" },
+      { $set: { status: "Zimmetli", assignmentDate: new Date() } },
+      { session }
+    );
+
+    if (updatedAssignments.modifiedCount === 0) {
+      // Hiçbir zimmet güncellenmediyse, ya zaten onaylanmışlar ya da ID'ler yanlış.
+      // Bu bir hata durumu değil, sadece bilgi verilebilir.
+    }
+
+    // Loglama için birkaç zimmet bilgisini alalım
+    const assignmentsForLog = await Assignment.find({
+      _id: { $in: assignmentIds },
+    })
+      .limit(5)
+      .populate("personnel", "fullName")
+      .populate("item", "name")
+      .session(session);
+
+    await logAction(
+      req.user,
+      "TOPLU_ZİMMET_ONAYLANDI",
+      `${assignmentIds.length} adet zimmet talebi onaylandı. (Örn: '${assignmentsForLog[0]?.personnel?.fullName}' personeline ait '${assignmentsForLog[0]?.item?.name}')`
+    );
+
+    await session.commitTransaction();
+    res
+      .status(200)
+      .json({ message: `${assignmentIds.length} zimmet başarıyla onaylandı.` });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500);
+    throw new Error("Toplu onaylama işlemi sırasında bir hata oluştu.");
+  } finally {
+    session.endSession();
+  }
+});
+
+// @desc    Birden çok zimmeti reddeder (siler)
+// @route   POST /api/assignments/reject-multiple
+// @access  Private/Admin
+const rejectMultipleAssignments = asyncHandler(async (req, res) => {
+  const { assignmentIds } = req.body;
+
+  if (
+    !assignmentIds ||
+    !Array.isArray(assignmentIds) ||
+    assignmentIds.length === 0
+  ) {
+    res.status(400);
+    throw new Error("Reddedilecek zimmet ID'leri bulunamadı.");
+  }
+
+  // Loglama için silmeden önce bilgileri alalım
+  const assignmentsToDelete = await Assignment.find({
+    _id: { $in: assignmentIds },
+  })
+    .populate("personnel", "fullName")
+    .populate("item", "name");
+
+  if (assignmentsToDelete.length === 0) {
+    res.status(404);
+    throw new Error("Reddedilecek zimmet bulunamadı.");
+  }
+
+  const result = await Assignment.deleteMany({ _id: { $in: assignmentIds } });
+
+  await logAction(
+    req.user,
+    "TOPLU_ZİMMET_REDDEDİLDİ",
+    `${result.deletedCount} adet zimmet talebi reddedildi ve silindi. (Örn: '${assignmentsToDelete[0]?.personnel?.fullName}' personeline ait '${assignmentsToDelete[0]?.item?.name}')`
+  );
+
+  res
+    .status(200)
+    .json({ message: `${result.deletedCount} zimmet başarıyla reddedildi.` });
 });
 
 module.exports = {
@@ -1317,4 +1461,6 @@ module.exports = {
   returnMultipleAssignments, // Yeni fonksiyonu export et
   printReturnReceipt, // Yeni fonksiyonu export et
   printBatchAssignmentForm, // Yeni toplu yazdırma fonksiyonunu export et
+  approveMultipleAssignments, // Yeni
+  rejectMultipleAssignments, // Yeni
 };

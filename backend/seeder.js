@@ -312,6 +312,11 @@ const seedItems = async () => {
         .toString(36)
         .substring(2, 8)
         .toUpperCase()}`,
+      // Yeni eklenen alanlar için rastgele veri oluştur
+      cost: faker.finance.amount({ min: 500, max: 50000, dec: 2 }),
+      purchaseDate: faker.date.past({ years: 4 }),
+      warrantyPeriod: getRandomElement([12, 24, 36]),
+
       description: `Otomatik oluşturulmuş ${assetType}.`,
       // status: 'Boşta' (default)
     });

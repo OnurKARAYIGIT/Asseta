@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import React from "react";
+import { useLocation, Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
@@ -7,12 +7,10 @@ import Loader from "../components/Loader";
 import { FaUser, FaLock, FaIdCard } from "react-icons/fa"; // FaIdCard ikonunu ekledik
 import logoAsseta from "../assets/logo.svg";
 import "./LoginPage.css";
-import axiosInstance from "../api/axiosInstance";
-import { history } from "../history";
-import { FaEnvelope } from "react-icons/fa"; // E-posta ikonu
 
 const LoginPage = () => {
-  const { userInfo, login, loading: authLoading } = useAuth(); // Artık context'ten gelen login ve loading'i kullanacağız
+  const { userInfo, login, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
   // React Hook Form kurulumu
@@ -23,22 +21,26 @@ const LoginPage = () => {
   } = useForm();
 
   // Eğer kullanıcı zaten giriş yapmışsa, onu doğrudan dashboard'a yönlendir.
-  // Bu, /login sayfasına tekrar erişmeye çalıştığında /no-access'e gitmesini engeller.
-  useEffect(() => {
-    // Sadece kullanıcı /login sayfasındaysa ve giriş yapmışsa yönlendirme yap.
-    if (userInfo && location.pathname === "/login") {
-      history.push("/dashboard");
-    }
-  }, [userInfo, location.pathname]);
+  if (userInfo) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // Form gönderimini ele alan fonksiyon
   const onSubmit = async (data) => {
-    await login(data.username, data.password); // AuthContext'teki login fonksiyonunu çağır
+    const loginSuccessful = await login(data.username, data.password);
+
+    if (loginSuccessful) {
+      // Kullanıcının nereden geldiğini kontrol et. Eğer özel bir yönlendirme yoksa /dashboard'a git.
+      // PrivateRoute'tan gelen 'from' bilgisini kullan, yoksa /dashboard'a yönlendir.
+      const from = location.state?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
+      toast.success("Başarıyla giriş yapıldı!");
+    }
   };
 
   return (
-    // Sadece bu sayfayı etkilemesi için 'dark' sınıfını buraya ekliyoruz.
-    <div className="login-page dark">
+    // Manuel 'dark' sınıfını kaldırıyoruz. Tema yönetimi global olarak yapılacak.
+    <div className="login-page">
       <div className="login-container">
         <div className="login-header">
           {/* 2. Metin yerine logonuzu kullanın */}
@@ -81,13 +83,19 @@ const LoginPage = () => {
               <p className="error-message">{errors.password.message}</p>
             )}
           </div>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={authLoading}
-          >
-            {authLoading ? <Loader size="sm" /> : "Giriş Yap"}
-          </button>
+          <div className=" flex justify-center items-center max-h-full">
+            {authLoading ? (
+              <Loader size="sm" />
+            ) : (
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={authLoading}
+              >
+                Giriş Yap
+              </button>
+            )}
+          </div>
         </form>
       </div>
       <footer className="login-footer">

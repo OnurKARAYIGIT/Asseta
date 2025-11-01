@@ -2,22 +2,20 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
-import { FaClipboardList } from "react-icons/fa";
+import { FaClipboardList, FaUndo } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
 import { toast } from "react-toastify";
 import { usePendingCount } from "../contexts/PendingCountContext";
 import { useSettings } from "../hooks/SettingsContext";
 import AssignmentsToolbar from "../components/assignments/AssignmentsToolbar";
-import AssignmentsTable from "../components/assignments/AssignmentsTable";
+import AssignmentsTable from "../components/assignments/AssignmentsTable"; // Bu yol artık doğru
 import AssignmentsPagination from "../components/assignments/AssignmentsPagination";
 import AddAssignmentModal from "../components/assignments/AddAssignmentModal";
 import ReturnAssignmentModal from "../components/assignments/ReturnAssignmentModal.jsx"; // Yeni modalı import et
 import ConfirmationModal from "../components/shared/ConfirmationModal";
 import * as XLSX from "xlsx"; // XLSX hala handleExport için gerekli
 import AssignmentDetailModal from "../components/assignments/AssignmentDetailModal";
-import { FaUndo } from "react-icons/fa";
-import SummaryModal from "../components/assignments/SummaryModal";
 const AssignmentsPage = () => {
   // Modal state'leri
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,14 +24,6 @@ const AssignmentsPage = () => {
   const [assignmentToDelete, setAssignmentToDelete] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [assignmentToReturn, setAssignmentToReturn] = useState(null);
-  // Özet Modalı için state'ler
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [summaryTitle, setSummaryTitle] = useState("");
-  const [summaryData, setSummaryData] = useState([]);
-  const [summaryType, setSummaryType] = useState("personnel"); // 'personnel' veya 'item'
-  const [summaryPersonnelId, setSummaryPersonnelId] = useState(null); // Özet modalı için personel ID'si
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState(null);
 
   // Arama ve Filtreleme state'leri
   const [searchTerm, setSearchTerm] = useState("");
@@ -202,6 +192,7 @@ const AssignmentsPage = () => {
   // React Query'den gelen verileri bileşenin kullanacağı değişkenlere ata
   const assignments = assignmentsData?.assignments || [];
   const totalPages = assignmentsData?.pages || 1;
+  const totalAssignments = assignmentsData?.total || 0;
 
   // --- React Query ile Veri Değiştirme (Mutations) ---
 
@@ -218,7 +209,6 @@ const AssignmentsPage = () => {
         if (isModalOpen) setIsModalOpen(false);
         if (isAddModalOpen) setIsAddModalOpen(false); // AddAssignmentModal'ı da kapat
         if (assignmentToDelete) setAssignmentToDelete(null);
-        if (isSummaryModalOpen) setIsSummaryModalOpen(false);
         if (assignmentToReturn) setAssignmentToReturn(null);
       }
     };
@@ -232,7 +222,6 @@ const AssignmentsPage = () => {
     isReturnModalOpen,
     isAddModalOpen,
     assignmentToDelete,
-    isSummaryModalOpen,
     assignmentToReturn,
   ]);
 
@@ -339,8 +328,9 @@ const AssignmentsPage = () => {
 
   const addAssignmentMutation = useMutation({
     mutationFn: (newAssignmentData) =>
-      axiosInstance.post("/assignments", newAssignmentData.data),
+      axiosInstance.post("/assignments", newAssignmentData), // Doğrudan newAssignmentData'yı gönder
     onSuccess: (createdAssignments, newAssignmentData) => {
+      // newAssignmentData burada formdan gelen tüm veriyi içerir
       invalidateAssignments();
       queryClient.invalidateQueries({ queryKey: ["availableItems"] }); // Boştaki eşya listesini yenile
       toast.success("Yeni zimmet başarıyla oluşturuldu ve beklemeye alındı.");
@@ -547,65 +537,6 @@ const AssignmentsPage = () => {
     []
   );
 
-  const handleSummaryClick = useCallback(
-    async (type, value, id = null) => {
-      setSummaryTitle(
-        `${value} için ${
-          type === "personnel" ? "Personel Özeti" : "Eşya Geçmişi"
-        }`
-      );
-      setIsSummaryModalOpen(true);
-      setSummaryLoading(true);
-      setSummaryData([]);
-      setSummaryError(null); // Hata durumunu sıfırla
-
-      try {
-        let params = {};
-        if (type === "personnel") {
-          setSummaryType("personnel");
-          params.personnelId = id; // Arama için isim yerine ID kullan
-          const { data } = await axiosInstance.get("/assignments/search", {
-            params,
-          });
-          // Backend gruplanmış veri döndürüyor
-          if (data && data.length > 0) {
-            setSummaryData(data[0].assignments);
-            // Detaylı rapora git butonu için personel ID'sini sakla
-            setSummaryPersonnelId(id); // Gelen ID'yi state'e ata
-          }
-        } else if (type === "item") {
-          setSummaryType("item");
-          // Eşyanın demirbaş numarasına göre tüm zimmetlerini getiren yeni bir yol kullanabiliriz.
-          // Şimdilik, mevcut endpoint'i keyword ile kullanarak bir çözüm üretiyoruz.
-          const { data: itemAssignments } = await axiosInstance.get(
-            "/assignments/search",
-            {
-              params: { itemAssetTag: value }, // Yeni parametreyi kullan
-            }
-          );
-          setSummaryData(
-            itemAssignments.length > 0 ? itemAssignments[0].assignments : []
-          );
-        }
-      } catch (err) {
-        console.error("Özet verisi çekilirken hata oluştu:", err);
-        toast.error("Özet verisi alınırken bir hata oluştu.");
-        setSummaryError("Özet verileri yüklenirken bir sorun oluştu.");
-      } finally {
-        setSummaryLoading(false);
-      }
-    },
-    [
-      setSummaryTitle,
-      setIsSummaryModalOpen,
-      setSummaryLoading,
-      setSummaryData,
-      setSummaryError,
-      setSummaryType,
-      setSummaryPersonnelId,
-    ]
-  );
-
   return (
     <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
       {assignmentsLoading ? (
@@ -630,6 +561,11 @@ const AssignmentsPage = () => {
             onReturn={() => setIsReturnModalOpen(true)}
             onAddNew={() => setIsAddModalOpen(true)}
           />
+          <div className="flex justify-end mb-2">
+            <div className="text-sm text-text-light whitespace-nowrap">
+              Toplam <strong>{totalAssignments}</strong> kayıt bulundu
+            </div>
+          </div>
           <AssignmentsTable
             assignments={assignments}
             columns={allColumns}
@@ -637,8 +573,6 @@ const AssignmentsPage = () => {
             sortConfig={sortConfig}
             handleSort={handleSort}
             handleRowClick={handleRowClick}
-            handleSummaryClick={handleSummaryClick}
-            // handleSummaryClick artık (type, value, id) bekliyor. Tablo bileşeni bunu doğru şekilde çağırmalı.
             handleDelete={(assignment) => setAssignmentToDelete(assignment)}
             handleReturn={(assignment) => setAssignmentToReturn(assignment)}
             userInfo={userInfo}
@@ -665,12 +599,9 @@ const AssignmentsPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(data) => {
-          // Artık async değil, sadece mutation'ı tetikliyor.
-          // Modal kapatma ve diğer işlemler onSuccess içinde yapılacak.
-          addAssignmentMutation.mutate({
-            data: data,
-            printForm: data.printForm,
-          });
+          // printForm bilgisi zaten data içinde geliyor.
+          // Mutation'a doğrudan data objesini gönderiyoruz.
+          addAssignmentMutation.mutate(data);
         }}
         availableItems={availableItems}
         companies={companies}
@@ -729,24 +660,6 @@ const AssignmentsPage = () => {
           eşya "Boşta" durumuna geçecektir.
         </p>
       </ConfirmationModal>
-
-      <SummaryModal
-        isOpen={isSummaryModalOpen}
-        onClose={() => setIsSummaryModalOpen(false)}
-        title={summaryTitle}
-        loading={summaryLoading}
-        data={summaryData}
-        error={summaryError}
-        type={summaryType}
-        onGoToDetails={
-          summaryPersonnelId
-            ? () => {
-                setIsSummaryModalOpen(false);
-                navigate(`/personnel/${summaryPersonnelId}/details`);
-              }
-            : null
-        }
-      />
     </div>
   );
 };

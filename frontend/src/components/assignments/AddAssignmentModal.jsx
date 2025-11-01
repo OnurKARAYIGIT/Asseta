@@ -86,7 +86,6 @@ const AddAssignmentModal = ({
     registeredSection: "",
     assignmentNotes: "",
   };
-  const [printOnSubmit, setPrintOnSubmit] = useState(false);
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
@@ -99,7 +98,6 @@ const AddAssignmentModal = ({
       setErrors({});
       setSearchTerm("");
       setHighlightedItem(null);
-      setPrintOnSubmit(false);
     }
   }, [isOpen]);
 
@@ -120,17 +118,11 @@ const AddAssignmentModal = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e, print = false) => {
     e.preventDefault();
     if (!validateForm()) return;
-    // Backend'e sadece ilgili alanları gönder, printForm'u ayır.
-    const { printForm, ...assignmentData } = {
-      ...formData,
-      printForm: printOnSubmit,
-    };
-    const dataToSubmit = { ...assignmentData, printForm: printOnSubmit };
-
-    onSubmit(dataToSubmit); // Artık async değil ve dönüş değeri beklemiyor
+    // onSubmit prop'una hem form verisini hem de yazdırma niyetini gönderiyoruz.
+    onSubmit({ ...formData, printForm: print });
   };
 
   const handleAddItem = (itemId) => {
@@ -187,7 +179,7 @@ const AddAssignmentModal = ({
       size="xlarge"
     >
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => handleSubmit(e, false)}>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Sol Sütun: Form Alanları */}
             <div className="lg:col-span-2 space-y-4 overflow-y-auto custom-scrollbar max-h-[450px] p-1 border border-transparent">
@@ -395,16 +387,15 @@ const AddAssignmentModal = ({
               İptal
             </Button>
             <Button
-              type="submit"
-              variant="primary"
-              onClick={() => setPrintOnSubmit(true)}
+              type="button" // Butonun formu göndermesini engelle
+              variant="primary" // Bu butona tıklandığında handleSubmit'e print=true gönderilir.
+              onClick={(e) => handleSubmit(e, true)}
             >
-              Oluştur ve Yazdır
+              Kaydet ve Yazdır
             </Button>
             <Button
               type="submit"
-              variant="primary"
-              onClick={() => setPrintOnSubmit(false)}
+              variant="primary" // Bu butona tıklandığında handleSubmit'e print=false (varsayılan) gönderilir.
             >
               Oluştur
             </Button>

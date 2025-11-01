@@ -7,7 +7,7 @@
   padding: 2rem;
 }
 
-.login-container {
+.login-page .login-container {
   background-color: rgba(22, 27, 34, 0.75); /* Yarı şeffaf kart arka planı */
   backdrop-filter: blur(10px); /* Arka planı bulanıklaştırarak cam efekti */
   padding: 2.5rem 3rem;
@@ -19,7 +19,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1); /* Cam efekti için parlak kenarlık */
 }
 
-.login-header {
+.login-page .login-header {
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Başlığı formdan ayıran çizgi */
@@ -28,34 +28,34 @@
   align-items: center;
 }
 
-.login-logo {
+.login-page .login-logo {
   height: 75px; /* Logoyu daha belirgin hale getir */
   width: auto;
   margin-bottom: 1rem; /* Altındaki boşluğu artır */
 }
 
-.login-tagline {
+.login-page .login-tagline {
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.9); /* Metin rengini daha belirgin yap */
 }
 
-.login-form .form-group {
+.login-page .login-form .form-group {
   margin-bottom: 1.5rem;
   text-align: left;
 }
 
-.login-form label {
+.login-page .login-form label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.7); /* Label rengini daha yumuşak yap */
 }
 
-.login-form .input-wrapper {
+.login-page .login-form .input-wrapper {
   position: relative;
 }
 
-.login-form .input-icon {
+.login-page .login-form .input-icon {
   position: absolute;
   left: 15px;
   top: 50%;
@@ -63,7 +63,7 @@
   color: rgba(255, 255, 255, 0.4); /* İkon rengi */
 }
 
-.login-form input {
+.login-page .login-form input {
   width: 100%;
   padding: 14px 14px 14px 45px; /* Form alanlarını daha büyük yap */
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -73,14 +73,14 @@
   font-size: 1.05rem; /* Yazı boyutunu biraz büyüt */
 }
 
-.login-form input:focus {
+.login-page .login-form input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px var(--primary-focus-color);
 }
 
 /* Buton Stilleri */
-.btn {
+.login-page .btn {
   display: inline-block;
   font-weight: 600;
   text-align: center;
@@ -98,36 +98,36 @@
   margin-top: 1rem; /* Üstündeki elemanla arasına boşluk ekle */
 }
 
-.btn-primary {
+.login-page .btn-primary {
   color: var(--white-color);
   background-color: var(--primary-color);
   border-color: var(--primary-color);
 }
-.btn-primary:hover {
+.login-page .btn-primary:hover {
   background-color: var(--primary-hover-color);
   border-color: var(--primary-hover-color);
 }
 
-.btn:disabled {
+.login-page .btn:disabled {
   background-color: var(--text-color-light);
   border-color: var(--text-color-light);
   cursor: not-allowed;
 }
 
-.error-message {
+.login-page .error-message {
   color: var(--danger-color);
   font-size: 0.875rem;
   margin-top: 0.5rem;
   text-align: left;
 }
 
-.login-footer {
+.login-page .login-footer {
   margin-top: 2rem;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.6); /* Footer metin rengi */
 }
 
-.login-footer a {
+.login-page .login-footer a {
   color: var(
     --secondary-color
   ); /* Koyu temada okunabilirlik için renk değiştirildi */

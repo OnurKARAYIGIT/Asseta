@@ -246,7 +246,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
               )}
             </NavLink>
             {item.children && openMenu === item.label && (
-              <ul className="absolute top-full left-0 mt-2 min-w-[220px] bg-card-background/80 backdrop-blur-md shadow-lg rounded-b-lg p-2 z-10 border border-white/10">
+              <ul className="absolute top-full left-0 mt-2 min-w-[220px] rounded-b-lg border border-white/10 bg-slate-500/50 p-2 shadow-xl backdrop-blur-xl z-150">
                 {renderNavItems(item.children)}
               </ul>
             )}
@@ -264,7 +264,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       }`}
     >
       <div className="flex items-center gap-6">
-        <Link to="/">
+        <Link to="/dashboard">
           <img
             src={logoAsseta}
             alt="Asseta Logo"

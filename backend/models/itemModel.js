@@ -53,6 +53,22 @@ const itemSchema = new mongoose.Schema(
       default: "Boşta",
       enum: ["Boşta", "Zimmetli", "Arızalı", "Hurda", "Beklemede"],
     },
+
+    // --- YENİ EKLENEN ALANLAR ---
+    cost: {
+      type: Number, // Maliyet (ör: 1500.50)
+      required: false,
+    },
+    purchaseDate: {
+      type: Date, // Satın Alma Tarihi
+      required: false,
+    },
+    warrantyPeriod: {
+      type: Number, // Garanti Süresi (Ay olarak)
+      required: false,
+      default: 0,
+    },
+    // --- YENİ EKLENEN ALANLAR SONU ---
   },
   { timestamps: true }
 );

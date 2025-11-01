@@ -8,10 +8,13 @@ const {
   getPendingGroupedAssignments, // Yeni fonksiyonu import et
   updateAssignment,
   deleteAssignment,
+  approveMultipleAssignments, // Yeni
+  rejectMultipleAssignments, // Yeni
   printAssignmentForm, // printAssignmentForm'u import et
   returnAssignment,
-  returnMultipleAssignments,
+  returnMultipleAssignments, // Bu fonksiyon import edilmemişti.
   printReturnReceipt,
+  printBatchAssignmentForm,
 } = require("../controllers/assignmentController");
 const {
   protect,
@@ -31,8 +34,12 @@ router.route("/pending-grouped").get(protect, getPendingGroupedAssignments);
 
 // Toplu zimmet iadesi için yeni rota
 router
-  .route("/return-multiple")
-  .put(protect, adminOrDeveloper, returnMultipleAssignments);
+  .route("/approve-multiple")
+  .put(protect, adminOrDeveloper, approveMultipleAssignments);
+
+router
+  .route("/reject-multiple")
+  .post(protect, adminOrDeveloper, rejectMultipleAssignments);
 
 // Tek bir zimmet üzerinde işlem yapmak için rotalar
 router
@@ -45,6 +52,8 @@ router
 router.route("/:id/return").put(protect, adminOrDeveloper, returnAssignment);
 
 router.route("/:id/print").get(protect, printAssignmentForm);
+router.route("/print-batch").post(protect, printBatchAssignmentForm);
+// router.route("/return-multiple").post(protect, returnMultipleAssignments);
 
 // İade tutanağı yazdırmak için yeni rota
 router.route("/return-receipts/:id/print").get(protect, printReturnReceipt);

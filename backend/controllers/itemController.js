@@ -35,6 +35,9 @@ const createItem = asyncHandler(async (req, res) => {
     softwareInfo,
     description,
     status, // status alanını request body'den al
+    cost,
+    purchaseDate,
+    warrantyPeriod,
   } = req.body;
 
   if (!name || !assetType) {
@@ -54,6 +57,9 @@ const createItem = asyncHandler(async (req, res) => {
     networkInfo,
     softwareInfo,
     description,
+    cost,
+    purchaseDate,
+    warrantyPeriod,
     status: status || "Boşta", // Eğer status gelmezse varsayılan olarak 'Boşta' ata
   });
 
@@ -206,26 +212,6 @@ const getItems = asyncHandler(async (req, res) => {
 });
 
 const updateItem = asyncHandler(async (req, res) => {
-  const {
-    name,
-    assetType,
-    assetSubType,
-    brand,
-    fixedAssetType,
-    assetTag,
-    modelYear,
-    serialNumber,
-    networkInfo,
-    softwareInfo,
-    description,
-    status, // status alanını request body'den al
-  } = req.body;
-
-  if (!name || !assetType) {
-    res.status(400);
-    throw new Error("Eşya adı ve Varlık Tipi zorunludur.");
-  }
-
   const item = await Item.findById(req.params.id);
 
   if (item) {
@@ -308,6 +294,11 @@ const exportItems = asyncHandler(async (req, res) => {
     "Marka / Model": item.brand,
     "Model Yılı": item.modelYear,
     "Oluşturulma Tarihi": new Date(item.createdAt).toLocaleDateString("tr-TR"),
+    "Maliyet (TL)": item.cost,
+    "Satın Alma Tarihi": item.purchaseDate
+      ? new Date(item.purchaseDate).toLocaleDateString("tr-TR")
+      : "",
+    "Garanti Süresi (Ay)": item.warrantyPeriod,
   }));
 
   const ws = XLSX.utils.json_to_sheet(dataToExport);

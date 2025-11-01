@@ -19,12 +19,12 @@ const AuditLogToolbar = ({
           name="userId"
           value={filters.userId}
           onChange={handleFilterChange}
-          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          className="w-full sm:w-48 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background text-text-main"
         >
           <option value="">Tüm Kullanıcılar</option>
           {users.map((user) => (
             <option key={user._id} value={user._id}>
-              {user.username}
+              {user.personnel?.fullName || user.username}
             </option>
           ))}
         </select>
@@ -37,7 +37,7 @@ const AuditLogToolbar = ({
           placeholderText="Tarih aralığı seçin"
           dateFormat="dd/MM/yyyy"
           locale="tr"
-          className="w-full sm:w-auto px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          className="w-full sm:w-48 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background text-text-main"
         />
         {isFilterActive && (
           <Button variant="text" size="sm" onClick={clearFilters}>

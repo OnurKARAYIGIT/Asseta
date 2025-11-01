@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import "./AdminPanelPage.css"; // Yeni CSS dosyasını import et
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../components/AuthContext";
+import Button from "../components/shared/Button"; // Button bileşenini import et
+import { FaUserPlus, FaUsers } from "react-icons/fa"; // İkonları import et
 import UserCard from "../components/admin/UserCard";
-import AdminToolbar from "../components/admin/AdminToolbar";
 import AddUserModal from "../components/admin/AddUserModal";
 import EditUserModal from "../components/admin/EditUserModal";
 import EditPermissionsModal from "../components/admin/EditPermissionsModal";
@@ -199,14 +199,30 @@ const AdminPanelPage = () => {
   };
 
   return (
-    <div className="admin-panel-page dark">
+    // Manuel 'dark' sınıfını kaldırıp, projenin genel yapısına uygun hale getiriyoruz.
+    <div className="bg-card-background p-6 sm:p-8 rounded-xl shadow-lg">
       {isLoading ? (
         <Loader />
       ) : isError ? (
         <p style={{ color: "red" }}>{error.message}</p>
       ) : (
         <div className="admin-panel-container">
-          <AdminToolbar onAddNewUser={() => setIsAddUserModalOpen(true)} />
+          {/* Başlık ve "Yeni Kullanıcı Ekle" butonu için tutarlı bir yapı */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <FaUsers className="text-secondary text-2xl" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-main">
+                Kullanıcı Yönetimi
+              </h1>
+            </div>
+            <Button
+              onClick={() => setIsAddUserModalOpen(true)}
+              variant="primary"
+              icon={<FaUserPlus />}
+            >
+              Yeni Kullanıcı Ekle
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {users
               .slice() // State'i doğrudan değiştirmemek için kopyasını oluştur

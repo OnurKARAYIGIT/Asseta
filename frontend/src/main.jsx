@@ -8,6 +8,7 @@ import { ThemeProvider } from "./components/ThemeContext.jsx";
 import { SettingsProvider } from "./hooks/SettingsContext.jsx"; // SettingsProvider'ı da ekleyelim
 import "react-toastify/dist/ReactToastify.css";
 import "./index.css";
+import { BrowserRouter } from "react-router-dom";
 // import "./pages/print.css"; // Yazdırma stillerini ekle
 
 // 1. Bir React Query istemcisi (client) oluştur
@@ -20,7 +21,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <AuthProvider>
           <SettingsProvider>
-            <App />
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
           </SettingsProvider>
         </AuthProvider>
       </ThemeProvider>

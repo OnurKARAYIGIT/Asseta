@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaTimes } from "react-icons/fa";
+import { createPortal } from "react-dom";
 import Button from "./Button";
 
 const Modal = ({
@@ -80,7 +81,7 @@ const Modal = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-[2000] overflow-y-auto"
       onMouseMove={handleMouseMove}
@@ -148,6 +149,8 @@ const Modal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default Modal;

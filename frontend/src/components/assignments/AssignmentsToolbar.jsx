@@ -35,7 +35,7 @@ const AssignmentsToolbar = ({
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2 w-full sm:w-auto">
+      <div className="flex items-center gap-4 w-full sm:w-auto">
         <Button
           onClick={onReturn}
           variant="secondary"

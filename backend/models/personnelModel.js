@@ -31,7 +31,6 @@ const personnelSchema = new mongoose.Schema(
     userAccount: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null,
       unique: true, // Her kullanıcı hesabı sadece bir personele ait olabilir.
       sparse: true, // null değerlerin yinelenmesine izin ver. Bu kritik!
     },

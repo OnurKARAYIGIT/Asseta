@@ -225,6 +225,36 @@ const AssignmentDetailModal = ({
                   {assignment.item.fixedAssetType || "-"}
                 </p>
               </div>
+              {/* YENİ EKLENEN ALANLAR */}
+              <div>
+                <label className="block text-sm font-medium text-text-light">
+                  Maliyet
+                </label>
+                <p className="text-text-main font-semibold">
+                  {assignment.item.cost
+                    ? `${assignment.item.cost.toFixed(2)} TL`
+                    : "-"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-light">
+                  Satın Alma Tarihi
+                </label>
+                <p className="text-text-main font-semibold">
+                  {formatDate(assignment.item.purchaseDate)}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-light">
+                  Garanti Süresi
+                </label>
+                <p className="text-text-main font-semibold">
+                  {assignment.item.warrantyPeriod
+                    ? `${assignment.item.warrantyPeriod} Ay`
+                    : "-"}
+                </p>
+              </div>
+              {/* YENİ EKLENEN ALANLAR SONU */}
               {assignment.item.networkInfo && (
                 <div>
                   <label className="block text-sm font-medium text-text-light">

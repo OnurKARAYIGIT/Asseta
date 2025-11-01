@@ -30,7 +30,48 @@ const createLocation = asyncHandler(async (req, res) => {
 // @route   GET /api/locations
 // @access  Private
 const getLocations = asyncHandler(async (req, res) => {
-  const locations = await Location.find({});
+  // Her bir konuma ait zimmetli eşya ve benzersiz personel sayısını hesaplamak için aggregation kullanıyoruz.
+  const locations = await Location.aggregate([
+    {
+      $lookup: {
+        from: "assignments", // Zimmetlerin bulunduğu koleksiyonun adı
+        localField: "_id", // Konumun ID'sini kullan
+        foreignField: "company", // Zimmetin şirket/konum ID'si ile eşleştir
+        as: "assignments",
+      },
+    },
+    {
+      $addFields: {
+        // Sadece 'Zimmetli' durumundaki kayıtları filtrele
+        activeAssignments: {
+          $filter: {
+            input: "$assignments",
+            as: "assignment",
+            cond: { $eq: ["$$assignment.status", "Zimmetli"] },
+          },
+        },
+      },
+    },
+    {
+      $addFields: {
+        assignedItemsCount: { $size: "$activeAssignments" },
+        // Aktif zimmetlerdeki benzersiz personel ID'lerini say
+        personnelCount: {
+          $size: { $setUnion: "$activeAssignments.personnel" },
+        },
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        address: 1,
+        contact: 1,
+        assignedItemsCount: 1,
+        personnelCount: 1,
+      }, // Gereksiz 'assignments' ve 'activeAssignments' dizilerini sonuçtan kaldır
+    },
+    { $sort: { name: 1 } }, // Sonuçları isme göre sırala
+  ]);
   res.json(locations);
 });
 
