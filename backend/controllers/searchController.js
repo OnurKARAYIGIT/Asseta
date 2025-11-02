@@ -2,7 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Assignment = require("../models/assignmentModel");
 const Item = require("../models/itemModel.js");
 const User = require("../models/userModel");
-const Personnel = require("../models/personnelModel");
+const Personnel = require("../models/personnelModel.js");
 
 // @desc    Global search across multiple models
 // @route   GET /api/search

@@ -15,9 +15,15 @@ import {
   FaClock,
   FaUsersCog,
   FaChevronDown,
+  FaFolderOpen,
+  FaAddressCard, // Yeni ikon
   FaSignInAlt,
+  FaMoneyBillWave,
   FaSearch,
+  FaBusinessTime, // Yeni ikon
+  FaCalendarCheck,
   FaRegCalendarAlt,
+  FaUserClock, // Yeni ikon
   FaChartBar,
   FaSun,
   FaMoon,
@@ -65,6 +71,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       label: "Zimmetler",
       className: "nav-assignments",
       icon: <FaClipboardList />,
+      iconColorClass: "text-yellow-400",
       permission: "zimmetler",
       children: [
         {
@@ -72,6 +79,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Tüm Zimmetler",
           className: "nav-assignments",
           icon: <FaClipboardList />,
+          iconColorClass: "text-yellow-400",
           permission: "zimmetler",
         },
         {
@@ -79,6 +87,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Bekleyenler",
           className: "nav-pending",
           icon: <FaClock />,
+          iconColorClass: "text-orange-500",
           permission: "zimmetler",
         },
         {
@@ -86,6 +95,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Eşyalar",
           className: "nav-items",
           icon: <FaBoxOpen />,
+          iconColorClass: "text-green-500",
           permission: "items",
         },
         {
@@ -93,6 +103,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Konumlar",
           className: "nav-locations",
           icon: <FaMapMarkerAlt />,
+          iconColorClass: "text-purple-500",
           permission: "locations",
         },
       ],
@@ -102,6 +113,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       label: "Personel Raporu",
       className: "nav-report",
       icon: <FaFileAlt />,
+      iconColorClass: "text-teal-400",
       permission: "personnel-report",
     },
     {
@@ -110,13 +122,74 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
       className: "nav-item-report",
       // Bu className için ikon rengi aşağıda tanımlanacak
       icon: <FaChartBar />,
+      iconColorClass: "text-blue-400",
       permission: "item-report",
     },
     {
+      className: "nav-audit",
+      // --- YENİ İK İŞLEMLERİ MENÜSÜ ---
+      label: "İK İşlemleri",
+      className: "nav-hr",
+      icon: <FaUserClock />,
+      iconColorClass: "text-cyan-400",
+      permission: "ik-islemleri", // Bu genel bir yetki, alt menüler kendi yetkilerini kontrol edecek
+      children: [
+        {
+          to: "/my-attendance",
+          label: "Mesaiye Başla/Bitir",
+          className: "nav-hr",
+          icon: <FaClock />,
+          iconColorClass: "text-cyan-400",
+          permission: "my-attendance", // Tüm çalışanlar
+        },
+        {
+          to: "/my-leaves",
+          label: "İzin Talebi",
+          className: "nav-hr",
+          icon: <FaCalendarCheck />,
+          iconColorClass: "text-lime-400",
+          permission: "my-leaves", // Tüm çalışanlar
+        },
+        {
+          to: "/attendance-records",
+          label: "Mesai Kayıtları",
+          className: "nav-hr",
+          icon: <FaBusinessTime />,
+          iconColorClass: "text-cyan-400",
+          permission: "admin", // Sadece adminler
+        },
+        {
+          to: "/leave-management",
+          label: "İzin Yönetimi",
+          className: "nav-hr",
+          icon: <FaCalendarCheck />,
+          iconColorClass: "text-emerald-400",
+          permission: "admin",
+        },
+        {
+          to: "/payroll-management",
+          label: "Maaş Yönetimi",
+          className: "nav-hr",
+          icon: <FaMoneyBillWave />,
+          iconColorClass: "text-yellow-400",
+          permission: "admin",
+        },
+        {
+          to: "/payroll-periods",
+          label: "Bordro İşlemleri",
+          className: "nav-hr",
+          icon: <FaFolderOpen />, // Yeni ikon
+          iconColorClass: "text-orange-400",
+          permission: "admin",
+        },
+      ],
+    },
+    {
       to: "/admin",
-      label: "Admin Paneli",
+      label: "Yönetim Paneli",
       className: "nav-admin",
       icon: <FaUsersCog />,
+      iconColorClass: "text-pink-300",
       permission: "admin",
       children: [
         {
@@ -124,6 +197,15 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Kullanıcı Yönetimi",
           className: "nav-admin",
           icon: <FaUsersCog />,
+          iconColorClass: "text-pink-300",
+          permission: "admin",
+        },
+        {
+          to: "/personnel",
+          label: "Personel Yönetimi",
+          className: "nav-admin",
+          icon: <FaAddressCard />,
+          iconColorClass: "text-pink-300",
           permission: "admin",
         },
         {
@@ -131,6 +213,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           label: "Denetim Kayıtları",
           className: "nav-audit",
           icon: <FaHistory />,
+          iconColorClass: "text-pink-500",
           permission: "audit-logs",
         },
       ],
@@ -186,19 +269,6 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     return items
       .filter((item) => hasPermission(item.permission))
       .map((item, index) => {
-        // İkon renklerini Tailwind sınıflarına çevirelim
-        const iconColorClass =
-          {
-            "nav-assignments": "text-yellow-400",
-            "nav-report": "text-teal-400",
-            "nav-admin": "text-pink-300",
-            "nav-pending": "text-orange-500",
-            "nav-items": "text-green-500",
-            "nav-item-report": "text-blue-400", // Eşya Raporu için renk eklendi
-            "nav-locations": "text-purple-500",
-            "nav-audit": "text-pink-500",
-          }[item.className] || "text-current";
-
         const commonClasses =
           "flex items-center gap-2 px-4 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors";
 
@@ -230,7 +300,9 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
               }
               to={item.children ? "#" : item.to} // Alt menü varsa link verme, yoksa ver
             >
-              <span className={iconColorClass}>{item.icon}</span>
+              <span className={item.iconColorClass || "text-current"}>
+                {item.icon}
+              </span>
               <span className="text-white">{item.label}</span>
               {item.children && (
                 <FaChevronDown

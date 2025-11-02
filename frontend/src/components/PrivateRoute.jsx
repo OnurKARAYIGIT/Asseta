@@ -3,8 +3,13 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 const PrivateRoute = ({ children, requiredPermission }) => {
-  const { userInfo, loading, hasPermission } = useAuth();
+  const { userInfo, loading } = useAuth();
   const location = useLocation();
+
+  // Eğer kullanıcı 'developer' ise, her zaman yetkisi vardır.
+  if (userInfo && userInfo.role === "developer") {
+    return children;
+  }
 
   // Eğer auth durumu henüz yüklenmediyse, yönlendirme yapma — bekle
   if (loading) return null; // veya bir Loader bileşeni gösterilebilir
@@ -15,8 +20,8 @@ const PrivateRoute = ({ children, requiredPermission }) => {
   }
 
   if (requiredPermission) {
-    // Yetki kontrolünü merkezi hasPermission fonksiyonuna devret
-    if (!hasPermission(requiredPermission)) {
+    // Yetki kontrolü
+    if (!userInfo.permissions?.includes(requiredPermission)) {
       return (
         <div className="page-container">
           <h1>Bu sayfaya erişim yetkiniz bulunmamaktadır.</h1>

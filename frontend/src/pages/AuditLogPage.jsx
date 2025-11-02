@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import Loader from "../components/Loader";
 import { FaHistory } from "react-icons/fa";
 import AuditLogTable from "../components/audit-log/AuditLogTable";
-import AuditLogToolbar from "../components/audit-log/AuditLogToolbar";
-import Pagination from "../components/shared/Pagination";
+import AuditLogToolbar from "../components/audit-log/AuditLogToolbar.jsx";
+import Pagination from "../components/shared/Pagination.jsx";
 import * as XLSX from "xlsx";
+import { useAuth } from "../components/AuthContext";
 
 const AuditLogPage = () => {
   const [filters, setFilters] = useState({
@@ -16,6 +17,7 @@ const AuditLogPage = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const { userInfo, hasPermission } = useAuth();
 
   // --- React Query ile Veri Çekme ---
 
@@ -27,6 +29,7 @@ const AuditLogPage = () => {
     error: auditError,
   } = useQuery({
     queryKey: ["auditLogs", { currentPage, itemsPerPage, filters }],
+    enabled: !!userInfo && hasPermission("audit-logs"), // userInfo'nun varlığını kontrol et
     queryFn: async () => {
       const params = {
         page: currentPage,
@@ -110,7 +113,7 @@ const AuditLogPage = () => {
       <Pagination
         currentPage={currentPage}
         totalPages={auditData?.pages || 1}
-        setCurrentPage={setCurrentPage}
+        onPageChange={setCurrentPage}
       />
     </div>
   );

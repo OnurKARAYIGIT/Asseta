@@ -179,7 +179,7 @@ const AssignmentsPage = () => {
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ["personnelList"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get("/personnel");
+      const { data } = await axiosInstance.get("/personnel/for-selection");
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 dakika

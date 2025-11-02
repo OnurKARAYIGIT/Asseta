@@ -3,12 +3,28 @@ const Assignment = require("../models/assignmentModel");
 const Item = require("../models/itemModel");
 const Location = require("../models/locationModel");
 const User = require("../models/userModel");
-const Personnel = require("../models/personnelModel"); // Personnel modelini import et
+const Personnel = require("../models/personnelModel.js");
+const Leave = require("../models/leaveModel.js");
+const AttendanceRecord = require("../models/attendanceRecordModel.js");
+const PayrollPeriod = require("../models/payrollPeriodModel.js");
+const PayrollRecord = require("../models/payrollRecordModel.js");
 
 // @desc    Ana panel için optimize edilmiş istatistikleri getirir
 // @route   GET /api/dashboard/stats
 // @access  Private
 const getDashboardStats = asyncHandler(async (req, res) => {
+  // Bugünün başlangıcı ve sonu (Aktif çalışan sorgusu için)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  // Bu ayın başlangıcı ve sonu (Fazla mesai sorgusu için)
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  monthEnd.setHours(23, 59, 59, 999);
+
   // Paralel olarak birden fazla sorgu çalıştır
   const [
     // 1. Temel sayım istatistikleri
@@ -23,6 +39,11 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     itemDistribution,
     // 5. Durum ve konuma göre eşya istatistikleri (Optimize edilmiş sorgu)
     itemStats,
+    // --- YENİ İK İSTATİSTİKLERİ ---
+    pendingLeaveCount,
+    activeEmployeesToday,
+    totalOvertimeThisMonth,
+    lastPayrollSummary,
   ] = await Promise.all([
     Item.countDocuments({}),
     Personnel.countDocuments({}), // Artık Personnel koleksiyonunu sayıyoruz
@@ -97,6 +118,38 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         },
       },
     ]),
+    // 6. Bekleyen izin talepleri sayısı
+    Leave.countDocuments({ status: "Beklemede" }),
+    // 7. Bugün aktif olan (giriş yapmış, çıkış yapmamış) çalışan sayısı
+    AttendanceRecord.countDocuments({
+      checkIn: { $gte: todayStart, $lte: todayEnd },
+      checkOut: null,
+      status: "Devam Ediyor",
+    }),
+    // 8. Bu ayki toplam fazla mesai (dakika olarak)
+    AttendanceRecord.aggregate([
+      { $match: { checkIn: { $gte: monthStart, $lte: monthEnd } } },
+      { $group: { _id: null, totalOvertime: { $sum: "$overtime" } } },
+    ]),
+    // 9. Son kilitli bordro döneminin özetini al
+    PayrollPeriod.aggregate([
+      { $match: { status: "Kilitli" } },
+      { $sort: { year: -1, month: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: "payrollrecords",
+          localField: "_id",
+          foreignField: "payrollPeriod",
+          as: "records",
+        },
+      },
+      {
+        $project: {
+          totalNetSalary: { $sum: "$records.netSalary" },
+        },
+      },
+    ]),
   ]);
 
   // Optimize edilmiş sorgudan gelen sonuçları işle
@@ -129,6 +182,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     totalPersonnel, // Frontend'e doğru veriyi gönder
     totalLocations,
     monthlyAssignments,
+    pendingLeaveCount,
+    activeEmployeesToday,
+    totalOvertimeThisMonth: totalOvertimeThisMonth[0]?.totalOvertime || 0,
+    lastPayrollTotal: lastPayrollSummary[0]?.totalNetSalary || 0,
     itemDistribution,
     recentAssignments,
     itemsByStatus, // "Boşta" sayısını içeren güncel liste

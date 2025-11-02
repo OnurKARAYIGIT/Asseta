@@ -11,6 +11,7 @@ const Pagination = ({
   totalPages,
   onPageChange,
   className = "",
+  totalItems,
 }) => {
   if (totalPages <= 1) {
     return null;
@@ -58,27 +59,36 @@ const Pagination = ({
   );
 
   return (
-    <div className={`flex justify-center items-center ${className}`}>
-      {renderButton(1, <FaAngleDoubleLeft />, currentPage === 1, "first")}
-      {renderButton(
-        currentPage - 1,
-        <FaChevronLeft />,
-        currentPage === 1,
-        "prev"
+    <div
+      className={`flex flex-col sm:flex-row justify-between items-center gap-4 ${className}`}
+    >
+      {totalItems !== undefined && (
+        <div className="text-sm text-text-light">
+          Toplam <strong>{totalItems}</strong> kayıt
+        </div>
       )}
-      {pageNumbers.map((number) => renderButton(number, null, false, number))}
-      {renderButton(
-        currentPage + 1,
-        <FaChevronRight />,
-        currentPage === totalPages,
-        "next"
-      )}
-      {renderButton(
-        totalPages,
-        <FaAngleDoubleRight />,
-        currentPage === totalPages,
-        "last"
-      )}
+      <div className="flex justify-center items-center">
+        {renderButton(1, <FaAngleDoubleLeft />, currentPage === 1, "first")}
+        {renderButton(
+          currentPage - 1,
+          <FaChevronLeft />,
+          currentPage === 1,
+          "prev"
+        )}
+        {pageNumbers.map((number) => renderButton(number, null, false, number))}
+        {renderButton(
+          currentPage + 1,
+          <FaChevronRight />,
+          currentPage === totalPages,
+          "next"
+        )}
+        {renderButton(
+          totalPages,
+          <FaAngleDoubleRight />,
+          currentPage === totalPages,
+          "last"
+        )}
+      </div>
     </div>
   );
 };

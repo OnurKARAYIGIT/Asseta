@@ -30,7 +30,7 @@ const assignmentSchema = new mongoose.Schema(
     personnel: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Personnel",
-      required: true,
+      // required: true, // Bu satırı kaldırıyoruz çünkü personel null olabilir (örn: hurda)
       index: true,
     },
     company: {
@@ -39,7 +39,11 @@ const assignmentSchema = new mongoose.Schema(
       ref: "Location",
       index: true,
     },
-    unit: { type: String, required: true },
+    unit: {
+      type: String,
+      required: [true, "Birim alanı zorunludur."],
+      default: "Genel", // Eğer unit belirtilmezse, varsayılan olarak "Genel" ata.
+    },
     location: { type: String },
     registeredSection: { type: String },
     assignmentDate: { type: Date, default: Date.now },

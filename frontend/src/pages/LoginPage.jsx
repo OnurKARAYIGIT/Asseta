@@ -83,19 +83,20 @@ const LoginPage = () => {
               <p className="error-message">{errors.password.message}</p>
             )}
           </div>
-          <div className=" flex justify-center items-center max-h-full">
+          <button
+            type="submit"
+            className="btn btn-primary w-full flex justify-center items-center"
+            disabled={authLoading}
+          >
             {authLoading ? (
-              <Loader size="sm" />
+              <>
+                <Loader size="sm" />{" "}
+                <span className="ml-2">Giriş Yapılıyor...</span>
+              </>
             ) : (
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={authLoading}
-              >
-                Giriş Yap
-              </button>
+              "Giriş Yap"
             )}
-          </div>
+          </button>
         </form>
       </div>
       <footer className="login-footer">

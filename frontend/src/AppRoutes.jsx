@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./components/AuthContext";
-
+import AttendanceRecordsPage from "./pages/AttendanceRecordsPage"; // Bu yolun doğru olduğunu teyit ediyoruz.
 // Ana Bileşenler
 import Loader from "./components/Loader";
 import Layout from "./components/Layout";
@@ -26,10 +26,26 @@ const PersonnelReportPage = lazy(() => import("./pages/PersonnelReportPage"));
 const PendingAssignmentsPage = lazy(() =>
   import("./pages/PendingAssignmentsPage")
 );
-const PersonnelDetailsPage = lazy(() => import("./pages/PersonnelDetailsPage"));
+const PersonnelDetailsPage = lazy(() =>
+  import("./pages/PersonnelDetailsPage.jsx")
+);
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ItemReportPage = lazy(() => import("./pages/ItemReportPage"));
 const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage"));
+const PersonnelPage = lazy(() => import("./pages/PersonnelPage")); // Yeni sayfayı import et
+const LeavesPage = lazy(() => import("./pages/LeavesPage.jsx")); // YENİ İZİN SAYFASI
+const ClockInOutPage = lazy(() => import("./pages/ClockInOutPage")); // YENİ MESAİ BAŞLATMA SAYFASI
+const LeaveManagementPage = lazy(() =>
+  import("./pages/LeaveManagementPage.jsx")
+); // YENİ İZİN YÖNETİMİ SAYFASI
+const PayrollManagementPage = lazy(() =>
+  import("./pages/PayrollManagementPage.jsx")
+); // YENİ İZİN YÖNETİMİ SAYFASI
+const PayrollPeriodsPage = lazy(() => import("./pages/PayrollPeriodsPage.jsx")); // YENİ BORDRO DÖNEMLERİ SAYFASI
+const PayrollPeriodDetailPage = lazy(() =>
+  import("./pages/PayrollPeriodDetailPage.jsx")
+); // YENİ BORDRO DÖNEM DETAY SAYFASI
+const MyPayrollsPage = lazy(() => import("./pages/MyPayrollsPage.jsx")); // YENİ BORDROLARIM SAYFASI
 
 // Kök dizine gelen istekleri yönlendiren bileşen
 const RootRedirect = () => {
@@ -117,6 +133,161 @@ const AppRoutes = () => {
               >
                 <PrivateRoute requiredPermission="admin">
                   <AdminPanelPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="personnel"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <PersonnelPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ MESAİ KAYITLARI ROTASI --- */}
+          <Route
+            path="attendance-records"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <AttendanceRecordsPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ İZİN YÖNETİMİ ROTASI --- */}
+          <Route
+            path="leave-management"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <LeaveManagementPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ MAAŞ YÖNETİMİ ROTASI --- */}
+          <Route
+            path="payroll-management"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <PayrollManagementPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ BORDRO DÖNEMLERİ ROTASI --- */}
+          <Route
+            path="payroll-periods"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <PayrollPeriodsPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ BORDRO DÖNEM DETAY ROTASI --- */}
+          <Route
+            path="payroll-periods/:periodId"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <PayrollPeriodDetailPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ BORDROLARIM ROTASI --- */}
+          <Route
+            path="my-payrolls"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                {/* Bu sayfa için özel bir yetki kontrolü gerekebilir, şimdilik tüm giriş yapanlar erişebilir */}
+                <PrivateRoute>
+                  <MyPayrollsPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ MESAİ BAŞLAT/BİTİR ROTASI --- */}
+          <Route
+            path="my-attendance"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                {/* Bu sayfa için özel bir yetki kontrolü gerekebilir, şimdilik tüm giriş yapanlar erişebilir */}
+                <PrivateRoute>
+                  <ClockInOutPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ İZİN TALEPLERİM ROTASI --- */}
+          <Route
+            path="my-leaves"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                {/* Bu sayfa için özel bir yetki kontrolü gerekebilir, şimdilik tüm giriş yapanlar erişebilir */}
+                <PrivateRoute>
+                  <LeavesPage />
                 </PrivateRoute>
               </Suspense>
             }

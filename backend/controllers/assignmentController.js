@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 // Not: Bu değişiklik sonrası model importları güncellenmeli
-const Personnel = require("../models/personnelModel");
+const Personnel = require("../models/personnelModel.js");
 const Assignment = require("../models/assignmentModel");
 const Item = require("../models/itemModel.js");
 const logAction = require("../utils/auditLogger");
@@ -144,18 +144,32 @@ const getAssignments = asyncHandler(async (req, res) => {
   let filter = {};
 
   // Durum filtresi
-  if (req.query.status) {
+  if (req.query.status && req.query.status !== "all") {
     filter.status = req.query.status;
-  } else {
-    // Varsayılan olarak sadece "Zimmetli" olanları göster. Kullanıcının geri bildirimi üzerine değiştirildi.
+  } else if (!req.query.personnel) {
+    // EĞER personele göre özel bir filtreleme YAPILMIYORSA,
+    // ana zimmet listesi için varsayılan olarak sadece "Zimmetli" olanları göster.
     filter.status = "Zimmetli";
   }
 
-  // Arama terimi (keyword) filtresi
+  // YENİ: Personele göre filtreleme
+  if (
+    req.query.personnel &&
+    mongoose.Types.ObjectId.isValid(req.query.personnel)
+  ) {
+    filter.personnel = new mongoose.Types.ObjectId(req.query.personnel);
+  }
 
-  // Agregasyon pipeline'ı
-  const pipeline = [
-    // 1. Eşya bilgilerini ekle
+  // YENİ: Konum filtresini de ana filtreye ekle
+  if (
+    req.query.location &&
+    mongoose.Types.ObjectId.isValid(req.query.location)
+  ) {
+    filter.company = new mongoose.Types.ObjectId(req.query.location);
+  }
+
+  // Agregasyon pipeline'ı (Lookup işlemleri)
+  const lookupPipeline = [
     {
       $lookup: {
         from: "items",
@@ -164,7 +178,6 @@ const getAssignments = asyncHandler(async (req, res) => {
         as: "item",
       },
     },
-    // 2. Eşya bir dizi olduğu için objeye çevir
     { $unwind: { path: "$item", preserveNullAndEmptyArrays: true } },
     // 3. Şirket/Konum bilgilerini ekle
     {
@@ -175,7 +188,6 @@ const getAssignments = asyncHandler(async (req, res) => {
         as: "company",
       },
     },
-    // 4. Şirket bir dizi olduğu için objeye çevir
     { $unwind: { path: "$company", preserveNullAndEmptyArrays: true } },
     // YENİ: Personel bilgilerini ekle
     {
@@ -186,24 +198,10 @@ const getAssignments = asyncHandler(async (req, res) => {
         as: "personnel",
       },
     },
-    // YENİ: Personel bir dizi olduğu için objeye çevir
     { $unwind: { path: "$personnel", preserveNullAndEmptyArrays: true } },
-    // 5. Durum filtresini uygula
-    { $match: filter },
   ];
 
-  // YENİ: Konum filtresini, company bilgileri eklendikten SONRA uygula
-  // Bu filtre artık en baştaki 'filter' objesine eklendiği için daha verimli çalışacak.
-  if (
-    req.query.location &&
-    mongoose.Types.ObjectId.isValid(req.query.location)
-  ) {
-    // Ana 'filter' objesine company ID'sini ekle.
-    // Bu, lookup işleminden önce filtreleme yaparak performansı artırır.
-    filter.company = new mongoose.Types.ObjectId(req.query.location);
-  }
-
-  // 6. Eğer keyword varsa, item alanlarını da içeren ek bir $match uygula
+  // Arama (keyword) filtresi
   const keyword = req.query.keyword;
   if (keyword && keyword.trim() !== "") {
     const searchRegex = { $regex: keyword, $options: "i" };
@@ -220,15 +218,14 @@ const getAssignments = asyncHandler(async (req, res) => {
       ],
     };
 
-    // Arama filtresini, mevcut durum filtresiyle birleştirerek uygula.
-    // Bu, arama yapıldığında bile durum filtresinin (örn: sadece "Zimmetli") korunmasını sağlar.
-    const combinedFilter = { $and: [filter, searchFilter] };
-    pipeline[pipeline.length - 1] = { $match: combinedFilter }; // Önceki $match'i bununla değiştir.
+    // Arama filtresini ana filtreye ekle
+    filter = { $and: [filter, searchFilter] };
   }
 
-  // Sayfalama ve sonuçları almak için $facet kullan
+  // Nihai pipeline'ı oluştur
   const facetPipeline = [
-    ...pipeline,
+    { $match: filter }, // 1. Adım: Tüm filtreleri en başta uygula (En Verimli Yöntem)
+    ...lookupPipeline, // 2. Adım: Gerekli belgeleri diğer koleksiyonlarla birleştir
     {
       $facet: {
         metadata: [{ $count: "total" }],

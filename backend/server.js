@@ -14,10 +14,14 @@ const locationRoutes = require("./routes/locationRoutes.js");
 const itemRoutes = require("./routes/itemRoutes.js");
 const assignmentRoutes = require("./routes/assignmentRoutes.js");
 const personnelRoutes = require("./routes/personnelRoutes.js");
+const documentRoutes = require("./routes/documentRoutes.js"); // Yeni rotayı import et
 const uploadRoutes = require("./routes/uploadRoutes.js");
 const auditLogRoutes = require("./routes/auditLogRoutes.js");
 const dashboardRoutes = require("./routes/dashboardRoutes.js");
 const searchRoutes = require("./routes/searchRoutes.js");
+const attendanceRoutes = require("./routes/attendanceRoutes.js");
+const leaveRoutes = require("./routes/leaveRoutes.js"); // YENİ: İzin rotalarını import et
+const payrollRoutes = require("./routes/payrollRoutes.js");
 
 const app = express();
 
@@ -36,10 +40,14 @@ app.use("/api/locations", locationRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/personnel", personnelRoutes);
+app.use("/api/documents", documentRoutes); // Yeni rotayı kullan
 app.use("/api/upload", uploadRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/attendance", attendanceRoutes); // YENİ: Mesai rotalarını uygulamaya tanıt
+app.use("/api/leaves", leaveRoutes); // YENİ: İzin rotalarını uygulamaya tanıt
+app.use("/api/payroll", payrollRoutes);
 
 // Yüklenen dosyaları dışarıya açmak için uploads klasörünü statik yap
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

@@ -45,4 +45,22 @@ const adminOrDeveloper = (req, res, next) => {
   }
 };
 
-module.exports = { protect, adminOrDeveloper };
+const protectWithApiKey = (req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+  const expectedApiKey = process.env.EXTERNAL_API_KEY; // .env dosyasından gelecek
+
+  if (!expectedApiKey) {
+    // Sunucu tarafında anahtar tanımlanmamışsa güvenlik zaafiyeti oluşmasın.
+    console.error("EXTERNAL_API_KEY .env dosyasında tanımlanmamış.");
+    res.status(500).send("Sunucu yapılandırma hatası.");
+    return;
+  }
+
+  if (apiKey && apiKey === expectedApiKey) {
+    next();
+  } else {
+    res.status(401).json({ message: "Geçersiz veya eksik API anahtarı." });
+  }
+};
+
+module.exports = { protect, adminOrDeveloper, protectWithApiKey };

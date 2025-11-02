@@ -19,6 +19,12 @@ const Item = require("./models/itemModel");
 const Assignment = require("./models/assignmentModel");
 const Location = require("./models/locationModel");
 const AuditLog = require("./models/auditLogModel");
+const AttendanceRecord = require("./models/attendanceRecordModel.js"); // YENİ: Mesai Kaydı modelini import et
+const SalaryComponent = require("./models/salaryComponent.js");
+const Leave = require("./models/leaveModel.js");
+const PayrollPeriod = require("./models/payrollPeriodModel.js");
+const PayrollRecord = require("./models/payrollRecordModel.js");
+const { calculateLegalDeductions } = require("./utils/payrollCalculator.js");
 
 // --- Konfigürasyon ---
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -71,6 +77,11 @@ const clearDatabase = async () => {
       Assignment.deleteMany(),
       Location.deleteMany(),
       AuditLog.deleteMany(),
+      AttendanceRecord.deleteMany(), // YENİ: Mesai kayıtlarını da temizle
+      SalaryComponent.deleteMany(),
+      Leave.deleteMany(),
+      PayrollPeriod.deleteMany(),
+      PayrollRecord.deleteMany(),
     ]);
     console.log("Veritabanı başarıyla temizlendi.".red.inverse);
   } catch (error) {
@@ -125,44 +136,135 @@ const seedLocations = async () => {
 /**
  * 500 adet Personel verisi oluşturur.
  */
-const seedPersonnel = async () => {
+const seedPersonnel = async (createdLocations) => {
   // Sisteme giriş yapacak özel personeller
   const specialPersonnel = [
     {
       fullName: "Onur KARAYİĞİT",
       employeeId: "P004",
-      department: "IT",
-      position: "Developer",
       email: "onur.karayigit@example.com",
+      company: createdLocations[0]._id, // Merkez Ofis
+      salaryInfo: {
+        grossSalary: 45000,
+        currency: "TRY",
+      },
+      // --- EKSİK BİLGİLER EKLENDİ ---
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: "Erkek",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: "IT",
+        position: "Developer",
+        employmentType: "Tam Zamanlı",
+        startDate: faker.date.past({ years: 5 }),
+      },
     },
     {
       fullName: "Ali Can Yılmaz",
       employeeId: "P001",
-      department: "IT",
-      position: "Sistem Yöneticisi",
       email: "ali.yilmaz@example.com",
+      company: createdLocations[0]._id, // Merkez Ofis
+      salaryInfo: {
+        grossSalary: 38000,
+        currency: "TRY",
+      },
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: "Erkek",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: "IT",
+        position: "Sistem Yöneticisi",
+        employmentType: "Tam Zamanlı",
+        startDate: faker.date.past({ years: 4 }),
+      },
     },
     {
       fullName: "Zeynep Kaya",
       employeeId: "P002",
-      department: "IT",
-      position: "Ağ Uzmanı",
       email: "zeynep.kaya@example.com",
+      company: createdLocations[1]._id, // İstanbul Şube
+      salaryInfo: {
+        grossSalary: 32000,
+        currency: "TRY",
+      },
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: "Kadın",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: "IT",
+        position: "Ağ Uzmanı",
+        employmentType: "Tam Zamanlı",
+        startDate: faker.date.past({ years: 3 }),
+      },
     },
     {
       fullName: "Mehmet Öztürk",
       employeeId: "P003",
-      department: "Muhasebe",
-      position: "Finans Uzmanı",
       email: "mehmet.ozturk@example.com",
+      company: createdLocations[1]._id, // İstanbul Şube
+      salaryInfo: {
+        grossSalary: 28500,
+        currency: "TRY",
+      },
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: "Erkek",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: "Muhasebe",
+        position: "Finans Uzmanı",
+        employmentType: "Tam Zamanlı",
+        startDate: faker.date.past({ years: 2 }),
+      },
     },
     // User 2
     {
       fullName: "Ayşe Vural",
       employeeId: "P005",
-      department: "Pazarlama",
-      position: "Pazarlama Uzmanı",
       email: "ayse.vural@example.com",
+      company: createdLocations[2]._id, // İzmir Depo
+      salaryInfo: {
+        grossSalary: 19500,
+        currency: "TRY",
+      },
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: "Kadın",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: "Pazarlama",
+        position: "Pazarlama Uzmanı",
+        employmentType: "Tam Zamanlı",
+        startDate: faker.date.past({ years: 1 }),
+      },
     },
   ];
 
@@ -176,21 +278,62 @@ const seedPersonnel = async () => {
     "Operasyon",
   ];
   const positions = ["Uzman", "Yönetici", "Asistan", "Müdür", "Destek"];
+  const employmentTypes = ["Tam Zamanlı", "Yarı Zamanlı", "Stajyer"];
+  const contractTypes = ["Belirli Süreli", "Belirsiz Süreli"];
 
   for (let i = specialPersonnel.length + 1; i <= 500; i++) {
     const employeeId = `P${i.toString().padStart(3, "0")}`;
+    const gender = faker.person.gender();
     const newPersonnel = {
       // Faker kullanarak rastgele ve gerçekçi isimler oluşturuyoruz
       fullName: `${faker.person.firstName()} ${faker.person.lastName()}`,
       employeeId: employeeId,
-      department: getRandomElement(departments),
-      position: getRandomElement(positions),
       email: `personel.${i}@example.com`,
+      company: getRandomElement(createdLocations)._id, // Rastgele bir şirket ata
+      salaryInfo: {
+        grossSalary: faker.finance.amount({ min: 17002, max: 45000, dec: 0 }),
+        currency: "TRY",
+      },
+      // --- EKSİK BİLGİLER EKLENDİ ---
+      personalInfo: {
+        tcNo: faker.string.numeric(11),
+        birthDate: faker.date.birthdate({ min: 18, max: 60, mode: "age" }),
+        gender: gender === "male" ? "Erkek" : "Kadın",
+      },
+      contactInfo: {
+        phone: faker.phone.number(),
+        address: faker.location.streetAddress(),
+      },
+      jobInfo: {
+        department: getRandomElement(departments),
+        position: getRandomElement(positions),
+        employmentType: getRandomElement(employmentTypes),
+        startDate: faker.date.past({ years: 10 }),
+      },
+      insuranceInfo: {
+        sgkNo: faker.string.numeric(12),
+        contractType: getRandomElement(contractTypes),
+      },
     };
     personnelData.push(newPersonnel);
   }
 
   const createdPersonnel = await Personnel.insertMany(personnelData);
+
+  // YENİ: İşten ayrılmış personel senaryosu oluştur
+  const inactivePersonnelIds = createdPersonnel
+    .slice(450, 470)
+    .map((p) => p._id); // 20 personeli pasif yap
+  await Personnel.updateMany(
+    { _id: { $in: inactivePersonnelIds } },
+    {
+      $set: {
+        isActive: false,
+        "jobInfo.endDate": faker.date.recent({ days: 365 }),
+      },
+    }
+  );
+
   console.log(`${createdPersonnel.length} personel oluşturuldu.`.green.inverse);
   return createdPersonnel;
 };
@@ -206,6 +349,18 @@ const seedUsers = async (createdPersonnel) => {
   const admin2Personnel = await Personnel.findOne({ employeeId: "P002" });
   const user1Personnel = await Personnel.findOne({ employeeId: "P003" });
   const user2Personnel = await Personnel.findOne({ employeeId: "P005" });
+
+  if (
+    !developerPersonnel ||
+    !admin1Personnel ||
+    !admin2Personnel ||
+    !user1Personnel ||
+    !user2Personnel
+  ) {
+    throw new Error(
+      "Kullanıcı oluşturmak için gerekli özel personellerden biri veya birkaçı veritabanında bulunamadı. Lütfen 'seedPersonnel' fonksiyonunu ve 'employeeId'leri kontrol edin."
+    );
+  }
 
   const usersData = [
     // 1 Developer (Full Yetki)
@@ -414,7 +569,7 @@ const seedAssignments = async (
       assignmentsToCreate.push(
         createSampleAssignment(
           item,
-          getRandomElement(createdPersonnel),
+          null, // Arızalı ve hurda eşyalar bir personele zimmetli olmayabilir.
           STATUS.FAULTY,
           mainAdminUser,
           izmirDepo
@@ -425,7 +580,7 @@ const seedAssignments = async (
       assignmentsToCreate.push(
         createSampleAssignment(
           item,
-          getRandomElement(createdPersonnel),
+          null, // Arızalı ve hurda eşyalar bir personele zimmetli olmayabilir.
           STATUS.SCRAPPED,
           mainAdminUser,
           merkezOfis
@@ -482,9 +637,10 @@ const createSampleAssignment = (
 ) => {
   return {
     item: item._id,
-    personnel: personnel._id,
+    personnel: personnel ? personnel._id : null,
     company: company._id,
-    unit: personnel.department,
+    // Eğer personel null ise, birim "Genel" olarak atansın.
+    unit: personnel ? personnel.department : "Genel",
     status: status,
     assignmentDate:
       assignmentDate ||
@@ -500,6 +656,237 @@ const createSampleAssignment = (
   };
 };
 
+/**
+ * YENİ: Rastgele Mesai Kayıtları (AttendanceRecord) oluşturur.
+ */
+const seedAttendanceRecords = async (createdPersonnel) => {
+  console.log("5. Rastgele mesai kayıtları oluşturuluyor...".cyan);
+  const recordsToCreate = [];
+  const standardWorkMinutes = 480; // 8 saat
+
+  // Personellerin bir kısmını seçelim (herkes her gün çalışmamış olabilir)
+  const workingPersonnel = createdPersonnel.slice(0, 200);
+
+  for (const personnel of workingPersonnel) {
+    // Her personel için son 30 gün içinde 5 ila 20 arası kayıt oluşturalım
+    const recordCount = faker.number.int({ min: 5, max: 20 });
+
+    for (let i = 0; i < recordCount; i++) {
+      const checkInDate = faker.date.recent({ days: 30 });
+      // 7 ila 10 saat arası bir çalışma süresi (dakika cinsinden)
+      const workDuration = faker.number.int({ min: 420, max: 600 });
+      const checkOutDate = new Date(
+        checkInDate.getTime() + workDuration * 60 * 1000
+      );
+
+      let overtime = 0;
+      if (workDuration > standardWorkMinutes) {
+        overtime = workDuration - standardWorkMinutes;
+      }
+
+      recordsToCreate.push({
+        personnel: personnel._id,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        workDuration: workDuration,
+        overtime: overtime,
+        status: "Tamamlandı",
+        notes: "Seeder tarafından otomatik oluşturuldu.",
+      });
+    }
+  }
+
+  await AttendanceRecord.insertMany(recordsToCreate);
+  console.log(
+    `${recordsToCreate.length} mesai kaydı oluşturuldu.`.green.inverse
+  );
+};
+
+/**
+ * YENİ: Maaş Bileşenleri (Ek Kazanç/Kesinti) oluşturur.
+ */
+const seedSalaryComponents = async (createdPersonnel) => {
+  console.log("6. Maaş bileşenleri oluşturuluyor...".cyan);
+  const componentsToCreate = [];
+  // Personellerin %20'sine yol yardımı ekle
+  const personnelWithRoadFee = createdPersonnel
+    .slice(0, 100)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 20);
+
+  for (const p of personnelWithRoadFee) {
+    componentsToCreate.push({
+      personnel: p._id,
+      name: "Yol Yardımı",
+      type: "Kazanç",
+      amount: 1710.38,
+    });
+  }
+
+  // Personellerin %10'una avans kesintisi ekle
+  const personnelWithAdvance = createdPersonnel
+    .slice(100, 200)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 10);
+
+  for (const p of personnelWithAdvance) {
+    componentsToCreate.push({
+      personnel: p._id,
+      name: "Avans Kesintisi",
+      type: "Kesinti",
+      amount: 2500,
+    });
+  }
+
+  await SalaryComponent.insertMany(componentsToCreate);
+  console.log(
+    `${componentsToCreate.length} maaş bileşeni oluşturuldu.`.green.inverse
+  );
+};
+
+/**
+ * YENİ: İzin Talepleri (Leave) oluşturur.
+ */
+const seedLeaves = async (createdPersonnel, { mainAdminUser }) => {
+  console.log("7. İzin talepleri oluşturuluyor...".cyan);
+  const leavesToCreate = [];
+  const leaveTypes = ["Yıllık İzin", "Hastalık", "Mazeret"];
+  const statuses = ["Onaylandı", "Reddedildi", "Beklemede"];
+
+  const personnelForLeaves = createdPersonnel.slice(0, 50);
+
+  for (const p of personnelForLeaves) {
+    const leaveCount = faker.number.int({ min: 1, max: 3 });
+    for (let i = 0; i < leaveCount; i++) {
+      const startDate = faker.date.recent({ days: 90 });
+      const endDate = new Date(
+        startDate.getTime() +
+          faker.number.int({ min: 1, max: 5 }) * 24 * 60 * 60 * 1000
+      );
+      const status = getRandomElement(statuses);
+
+      leavesToCreate.push({
+        personnel: p._id,
+        leaveType: getRandomElement(leaveTypes),
+        startDate,
+        endDate,
+        reason: `Otomatik oluşturulmuş ${status} izin talebi.`,
+        status,
+        approvedBy: status !== "Beklemede" ? mainAdminUser._id : null,
+        rejectionReason:
+          status === "Reddedildi" ? "Yetersiz bakiye." : undefined,
+      });
+    }
+  }
+
+  await Leave.insertMany(leavesToCreate);
+  console.log(
+    `${leavesToCreate.length} izin talebi oluşturuldu.`.green.inverse
+  );
+};
+
+/**
+ * YENİ: Bordro Dönemleri (PayrollPeriod) oluşturur.
+ */
+const seedPayrollPeriods = async (locationData) => {
+  console.log("8. Bordro dönemleri oluşturuluyor...".cyan);
+  const periodsToCreate = [
+    {
+      name: `Şubat 2024 - ${locationData.merkezOfis.name}`,
+      year: 2024,
+      month: 2,
+      company: locationData.merkezOfis._id,
+      status: "Kilitli",
+    },
+    {
+      name: `Mart 2024 - ${locationData.merkezOfis.name}`,
+      year: 2024,
+      month: 3,
+      company: locationData.merkezOfis._id,
+      status: "Açık",
+    },
+    {
+      name: `Mart 2024 - ${locationData.istanbulSube.name}`,
+      year: 2024,
+      month: 3,
+      company: locationData.istanbulSube._id,
+      status: "Açık",
+    },
+  ];
+  await PayrollPeriod.insertMany(periodsToCreate);
+  console.log(
+    `${periodsToCreate.length} bordro dönemi oluşturuldu.`.green.inverse
+  );
+};
+
+/**
+ * YENİ: Kilitli bordro dönemi için örnek bordro kayıtları oluşturur.
+ */
+const seedPayrollRecordsForLockedPeriod = async () => {
+  console.log("9. Kilitli dönem için bordro kayıtları oluşturuluyor...".cyan);
+
+  const lockedPeriod = await PayrollPeriod.findOne({ status: "Kilitli" });
+  if (!lockedPeriod) {
+    console.log("Kilitli bordro dönemi bulunamadı, bu adım atlanıyor.".yellow);
+    return;
+  }
+
+  const personnelInCompany = await Personnel.find({
+    company: lockedPeriod.company,
+    isActive: true,
+  });
+
+  const allComponents = await SalaryComponent.find({
+    personnel: { $in: personnelInCompany.map((p) => p._id) },
+  });
+
+  const recordsToCreate = [];
+
+  for (const personnel of personnelInCompany) {
+    const grossSalary = personnel.salaryInfo?.grossSalary || 0;
+    const currency = personnel.salaryInfo?.currency || "TRY";
+
+    const personnelComponents = allComponents.filter(
+      (c) => c.personnel.toString() === personnel._id.toString()
+    );
+
+    const earnings = personnelComponents.filter((c) => c.type === "Kazanç");
+    const deductions = personnelComponents.filter((c) => c.type === "Kesinti");
+
+    const totalEarningsAmount = earnings.reduce((sum, c) => sum + c.amount, 0);
+    const totalDeductionsAmount = deductions.reduce(
+      (sum, c) => sum + c.amount,
+      0
+    );
+
+    const totalGross = grossSalary + totalEarningsAmount;
+    const legalDeductions = calculateLegalDeductions(totalGross);
+    const finalNetSalary = legalDeductions.netSalary - totalDeductionsAmount;
+
+    recordsToCreate.push({
+      payrollPeriod: lockedPeriod._id,
+      personnel: personnel._id,
+      company: personnel.company,
+      status: "Hesaplandı",
+      grossSalary,
+      earnings: earnings.map((e) => ({ name: e.name, amount: e.amount })),
+      totalEarnings: totalGross,
+      deductions: deductions.map((d) => ({ name: d.name, amount: d.amount })),
+      totalDeductions: totalDeductionsAmount,
+      ...legalDeductions,
+      netSalary: finalNetSalary,
+      currency,
+    });
+  }
+
+  if (recordsToCreate.length > 0) {
+    await PayrollRecord.insertMany(recordsToCreate);
+    console.log(
+      `${recordsToCreate.length} adet bordro kaydı oluşturuldu.`.green.inverse
+    );
+  }
+};
+
 // ===================================================================================
 // ANA ÇALIŞTIRMA MANTIĞI
 // ===================================================================================
@@ -513,7 +900,7 @@ const importData = async () => {
     await clearDatabase();
 
     const locationData = await seedLocations();
-    const createdPersonnel = await seedPersonnel();
+    const createdPersonnel = await seedPersonnel(locationData.createdLocations);
     const userData = await seedUsers(createdPersonnel);
     const createdItems = await seedItems();
     await seedAssignments(
@@ -527,6 +914,29 @@ const importData = async () => {
       userData.mainAdminUser,
       createdItems.length
     );
+    await seedAttendanceRecords(createdPersonnel); // YENİ: Mesai kayıtlarını oluştur
+    await seedSalaryComponents(createdPersonnel);
+    await seedLeaves(createdPersonnel, userData);
+    await seedPayrollPeriods(locationData);
+    await seedPayrollRecordsForLockedPeriod();
+
+    // YENİ: Yönetici atamalarını yap
+    console.log("Yönetici hiyerarşisi oluşturuluyor...".cyan);
+    const allPersonnel = await Personnel.find({ isActive: true }).select("_id");
+    for (const p of allPersonnel) {
+      // %70 ihtimalle bir yönetici ata
+      if (Math.random() < 0.7) {
+        const potentialManagers = allPersonnel.filter(
+          (m) => m._id.toString() !== p._id.toString()
+        );
+        const randomManager = getRandomElement(potentialManagers);
+        if (randomManager) {
+          await Personnel.findByIdAndUpdate(p._id, {
+            manager: randomManager._id,
+          });
+        }
+      }
+    }
 
     console.log("Veri başarıyla import edildi!".green.inverse);
     process.exit();

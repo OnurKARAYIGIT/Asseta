@@ -4,11 +4,11 @@ const {
   createCompany,
   getCompanies,
 } = require("../controllers/companyController");
-const { protect, admin } = require("../middleware/authMiddleware");
+const { protect, adminOrDeveloper } = require("../middleware/authMiddleware");
 
 router
   .route("/")
-  .post(protect, admin, createCompany)
+  .post(protect, adminOrDeveloper, createCompany)
   .get(protect, getCompanies);
 
 module.exports = router;

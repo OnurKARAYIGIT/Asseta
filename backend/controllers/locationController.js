@@ -127,9 +127,18 @@ const deleteLocation = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get location list for select inputs
+// @route   GET /api/locations/for-selection
+// @access  Private
+const getLocationsForSelection = asyncHandler(async (req, res) => {
+  const locations = await Location.find({}).select("name");
+  res.json(locations);
+});
+
 module.exports = {
   createLocation,
   getLocations,
   updateLocation,
   deleteLocation,
+  getLocationsForSelection,
 };

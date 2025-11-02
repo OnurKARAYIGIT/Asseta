@@ -18,6 +18,9 @@ import {
   FaClipboardList,
   FaUsers,
   FaMapMarkerAlt,
+  FaHourglassHalf,
+  FaUserClock,
+  FaBusinessTime,
 } from "react-icons/fa";
 import {
   Chart as ChartJS,
@@ -31,6 +34,7 @@ import {
   ArcElement,
   PointElement,
 } from "chart.js";
+import { FaMoneyCheckAlt } from "react-icons/fa";
 
 import "./DashboardPage.css";
 
@@ -85,7 +89,7 @@ const DashboardPage = () => {
       ) : (
         stats && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <StatCard
                 className="total-assignments-card"
                 icon={<FaClipboardList />}
@@ -104,8 +108,8 @@ const DashboardPage = () => {
                 className="total-users-card"
                 icon={<FaUsers />}
                 title="Toplam Personel"
-                value={stats.totalPersonnel}
-                // linkTo="/admin" // IK modülü eklenene kadar yönlendirme kaldırıldı.
+                value={stats.totalPersonnel} // Değişiklik yok, sadece bağlam için burada
+                linkTo="/personnel"
               />
               <StatCard
                 className="total-locations-card"
@@ -113,6 +117,43 @@ const DashboardPage = () => {
                 title="Toplam Konum"
                 value={stats.totalLocations}
                 linkTo="/locations"
+              />
+            </div>
+
+            {/* --- YENİ İK İSTATİSTİK KARTLARI --- */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatCard
+                className="pending-leaves-card"
+                icon={<FaHourglassHalf />}
+                title="Bekleyen İzin Talebi"
+                value={stats.pendingLeaveCount}
+                linkTo="/leave-management"
+              />
+              <StatCard
+                className="active-employees-card"
+                icon={<FaUserClock />}
+                title="Bugün Aktif Çalışan"
+                value={stats.activeEmployeesToday}
+                linkTo="/attendance-records"
+              />
+              <StatCard
+                className="overtime-card"
+                icon={<FaBusinessTime />}
+                title="Bu Ayki Fazla Mesai"
+                value={`${(stats.totalOvertimeThisMonth / 60).toFixed(1)} sa`}
+                linkTo="/attendance-records"
+              />
+              <StatCard
+                className="payroll-card"
+                icon={<FaMoneyCheckAlt />}
+                title="Son Maaş Ödemesi"
+                value={stats.lastPayrollTotal.toLocaleString("tr-TR", {
+                  style: "currency",
+                  currency: "TRY",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+                linkTo="/payroll-periods"
               />
             </div>
 

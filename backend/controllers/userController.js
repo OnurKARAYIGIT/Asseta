@@ -2,7 +2,7 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken"); // Bu satırı ekleyin
-const Personnel = require("../models/personnelModel"); // Personnel modelini import et
+const Personnel = require("../models/personnelModel.js"); // Personnel modelini import et
 const generateToken = require("../utils/generateToken.js");
 const Assignment = require("../models/assignmentModel");
 const logAction = require("../utils/auditLogger");
@@ -154,7 +154,6 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error(`Giriş işlemi sırasında bir hata oluştu: ${error.message}`);
   }
 });
-
 // @desc    Kullanıcı çıkışı yapar ve cookie'leri temizler
 // @route   POST /api/users/logout
 // @access  Public
@@ -235,9 +234,10 @@ const updateUserPassword = asyncHandler(async (req, res) => {
 // @route   GET /api/users/settings
 // @access  Private
 const getUserSettings = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("settings");
+  const user = await User.findById(req.user._id);
   if (user) {
-    // Eğer kullanıcının ayarları henüz yoksa, varsayılan ayarları döndür
+    // user.settings undefined olabileceğinden, boş bir obje ile fallback yapalım.
+    // Bu, frontend'de `settings.someKey` gibi erişimlerde hata alınmasını engeller.
     res.json(user.settings || {});
   } else {
     res.status(404);
