@@ -7,7 +7,11 @@ const Personnel = require("../models/personnelModel.js");
 const Leave = require("../models/leaveModel.js");
 const AttendanceRecord = require("../models/attendanceRecordModel.js");
 const PayrollPeriod = require("../models/payrollPeriodModel.js");
-const PayrollRecord = require("../models/payrollRecordModel.js");
+
+// YENİ: İşe alım modellerini import et
+const JobOpening = require("../models/jobOpeningModel.js");
+const Candidate = require("../models/candidateModel.js");
+const Application = require("../models/applicationModel.js");
 
 // @desc    Ana panel için optimize edilmiş istatistikleri getirir
 // @route   GET /api/dashboard/stats
@@ -44,6 +48,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     activeEmployeesToday,
     totalOvertimeThisMonth,
     lastPayrollSummary,
+    // --- YENİ İŞE ALIM İSTATİSTİKLERİ ---
+    openJobOpeningsCount,
+    totalCandidatesCount,
+    offersPending,
   ] = await Promise.all([
     Item.countDocuments({}),
     Personnel.countDocuments({}), // Artık Personnel koleksiyonunu sayıyoruz
@@ -150,6 +158,22 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         },
       },
     ]),
+    // --- YENİ İŞE ALIM SORGULARI ---
+    // 10. Aktif (Açık) iş ilanı sayısı
+    JobOpening.countDocuments({ status: "Açık" }),
+    // 11. Toplam aday havuzu sayısı
+    Candidate.countDocuments({}),
+    // 12. "Teklif" aşamasındaki başvuruları ve sayısını getir
+    Application.aggregate([
+      { $match: { status: "Teklif" } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          jobOpeningIds: { $addToSet: "$jobOpening" },
+        },
+      },
+    ]),
   ]);
 
   // Optimize edilmiş sorgudan gelen sonuçları işle
@@ -187,6 +211,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     totalOvertimeThisMonth: totalOvertimeThisMonth[0]?.totalOvertime || 0,
     lastPayrollTotal: lastPayrollSummary[0]?.totalNetSalary || 0,
     itemDistribution,
+    openJobOpeningsCount,
+    totalCandidatesCount,
+    offersPendingCount: offersPending[0]?.count || 0,
+    firstOfferJobId: offersPending[0]?.jobOpeningIds[0] || null, // YENİ: İlk teklifli ilan ID'si
     recentAssignments,
     itemsByStatus, // "Boşta" sayısını içeren güncel liste
     itemsByLocation: activeAssignmentsData, // Konuma göre dağılım

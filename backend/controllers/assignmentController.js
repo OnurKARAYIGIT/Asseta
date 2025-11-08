@@ -222,6 +222,12 @@ const getAssignments = asyncHandler(async (req, res) => {
     filter = { $and: [filter, searchFilter] };
   }
 
+  // YENİ: Demirbaş numarasına (assetTag) göre filtreleme
+  const assetTag = req.query.assetTag;
+  if (assetTag) {
+    lookupPipeline.push({ $match: { "item.assetTag": assetTag } });
+  }
+
   // Nihai pipeline'ı oluştur
   const facetPipeline = [
     { $match: filter }, // 1. Adım: Tüm filtreleri en başta uygula (En Verimli Yöntem)

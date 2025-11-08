@@ -22,6 +22,12 @@ const searchRoutes = require("./routes/searchRoutes.js");
 const attendanceRoutes = require("./routes/attendanceRoutes.js");
 const leaveRoutes = require("./routes/leaveRoutes.js"); // YENİ: İzin rotalarını import et
 const payrollRoutes = require("./routes/payrollRoutes.js");
+const notificationRoutes = require("./routes/notificationRoutes.js"); // YENİ: Bildirim rotalarını import et
+// YENİ: İşe Alım Modülü Rotaları
+const jobOpeningRoutes = require("./routes/jobOpeningRoutes.js");
+const candidateRoutes = require("./routes/candidateRoutes.js");
+const applicationRoutes = require("./routes/applicationRoutes.js"); // YENİ: Başvuru rotalarını import et
+const interviewRoutes = require("./routes/interviewRoutes.js");
 
 const app = express();
 
@@ -48,6 +54,12 @@ app.use("/api/search", searchRoutes);
 app.use("/api/attendance", attendanceRoutes); // YENİ: Mesai rotalarını uygulamaya tanıt
 app.use("/api/leaves", leaveRoutes); // YENİ: İzin rotalarını uygulamaya tanıt
 app.use("/api/payroll", payrollRoutes);
+app.use("/api/notifications", notificationRoutes); // YENİ: Bildirim rotalarını uygulamaya tanıt
+// YENİ: İşe Alım Modülü Rotalarını uygulamaya tanıt
+app.use("/api/job-openings", jobOpeningRoutes);
+app.use("/api/candidates", candidateRoutes); // YENİ: Aday rotalarını uygulamaya tanıt
+app.use("/api/applications", applicationRoutes);
+app.use("/api/interviews", interviewRoutes);
 
 // Yüklenen dosyaları dışarıya açmak için uploads klasörünü statik yap
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

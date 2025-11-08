@@ -1,0 +1,131 @@
+**Proje Adı: Asseta - Bütünleşik Varlık ve İK Yönetim Sistemi**
+
+**Açılış Sahnesi - Değer Önerisi:**
+
+"Tüm operasyonlarınızı tek bir yerden yönettiğiniz bir komuta merkezi hayal edin. Varlıklarınızın nerede olduğunu anında bildiğiniz, işe alımdan bordroya tüm İK süreçlerinizi otomatikleştirdiğiniz ve her işlemin şeffaf bir şekilde kaydedildiği bir ekosistem. Bu, Asseta."
+
+**Genel Konsept ve Atmosfer:**
+Modern, profesyonel ve veri odaklı bir kurumsal web uygulamasının (ERP/SaaS) arayüzü. Tasarım dili temiz, sezgisel ve şık. Koyu tema (dark mode) hakim; ana renkler olarak derin lacivert, antrasit ve gri tonları kullanılıyor. Vurgu renkleri olarak canlı bir mavi (linkler, butonlar), yeşil (başarı durumları), sarı (uyarılar) ve kırmızı (hata/silme işlemleri) kullanılıyor. Tipografi okunaklı ve modern (örneğin, Inter veya Poppins). Tüm arayüz, gölgeler ve yuvarlatılmış köşelerle katmanlı bir his veriyor.
+
+---
+
+**Sahne 1: Ana Panel (Dashboard - `/`) - 30.000 Fit'ten Bakış**
+
+**Problem:** Farklı departmanlardan gelen dağınık veriler, raporlar ve Excel tabloları arasında kaybolmak.
+**Çözüm:** Tüm organizasyonun nabzını tek bir ekranda tutan, akıllı ve interaktif bir kontrol merkezi.
+
+Uygulamaya giriş yapıldığında kullanıcıyı karşılayan, tüm sistemin nabzını tutan dinamik bir ekran.
+
+*   **Üst Kısım:** Geniş bir başlık: "Ana Panel". Yanında kullanıcıyı "Hoş Geldin, [Kullanıcı Adı]!" diyerek selamlayan bir metin.
+*   **İstatistik Kartları (StatCards):** Ekranın en üstünde, 4x3'lük bir grid yapısında, her biri kendi ikonuna sahip, tıklanabilir 12 adet istatistik kartı.
+    *   **Varlık Grubu:** "Toplam Zimmet", "Toplam Eşya", "Toplam Personel", "Toplam Konum".
+    *   **İK Grubu:** "Bekleyen İzin Talebi", "Bugün Aktif Çalışan", "Bu Ayki Fazla Mesai", "Son Maaş Ödemesi".
+    *   **İşe Alım Grubu:** "Açık İş İlanı", "Aday Havuzu", "Teklif Aşamasında".
+*   **Akıllı Yönlendirme:** "Teklif Aşamasında" kartına tıklandığında, kullanıcının anında İşe Alım panosuna, doğrudan "Teklif" sütununa odaklanmış ve ilgili iş ilanı seçilmiş bir şekilde "ışınlandığını" gösteren bir animasyon.
+*   **Grafik Alanı:** Kartların altında, 2x2'lik bir grid yapısında dört adet interaktif grafik.
+    *   **Varlık Türüne Göre Dağılım:** "Laptop", "Monitör", "Telefon" gibi dilimlerden oluşan bir pasta grafiği (Doughnut Chart).
+    *   **Aylık Zimmet Grafiği:** Son 12 ayın zimmetleme yoğunluğunu gösteren bir çubuk grafik (Bar Chart).
+    *   **Eşya Durum Dağılımı:** "Boşta", "Zimmetli", "Arızalı" gibi dilimlerden oluşan, renk kodlu bir başka pasta grafiği.
+    *   **Konumlara Göre Zimmet Dağılımı:** "Merkez Ofis", "Depo A" gibi lokasyonlardaki zimmet sayılarını gösteren bir çubuk grafik.
+*   **Son Aktiviteler:** Ekranın en altında, "Son Zimmetler" başlığı altında, kimin hangi eşyayı ne zaman aldığını gösteren, zaman damgalı bir liste.
+
+---
+
+**Sahne 2: Varlık Yönetimi (Zimmetler Menüsü) - Kayıp Varlıklara Son**
+
+**Problem:** Excel tablolarında kaybolan, kimde olduğu bilinmeyen ve takibi imkansız hale gelen şirket varlıkları.
+**Çözüm:** Her bir varlığın yaşam döngüsünü dijital olarak takip eden, şeffaf ve güçlü bir envanter yönetimi.
+
+*   **Alt Sahne 2.1: Tüm Zimmetler (`/assignments`):**
+    *   **Görünüm:** Aktif zimmetlerin listelendiği, güçlü bir data tablosu. Üstte kapsamlı bir arama çubuğu ve filtre butonları (Konum, Durum).
+    *   **Tablo:** Sütunlar: "Personel Adı", "Eşya Adı", "Demirbaş No", "Konum", "Zimmet Tarihi".
+    *   **Aksiyonlar:** Her satırın sonunda "İade Al" (geri ok ikonu) ve "Yazdır" (yazıcı ikonu) butonları.
+    *   **Etkileşim:** Arama çubuğuna "Laptop" yazıldığında, tablonun anında filtrelenmesi. "Yazdır" butonuna basıldığında, Sahne 3'te detaylandırılan PDF belgesinin yeni bir sekmede açılması.
+
+*   **Alt Sahne 2.2: Bekleyenler (`/pending-assignments`):**
+    *   **Görünüm:** Zimmet taleplerinin, talepte bulunan personele göre gruplandırıldığı bir liste. Her personel grubunun yanında bir onay kutusu (checkbox) bulunur.
+    *   **Etkileşim:** Bir personel grubuna tıklandığında, o kişinin talep ettiği eşyaların listesi açılır. Bir veya daha fazla grup seçilip "Seçilenleri Onayla" butonuna basıldığında, taleplerin durumu "Zimmetli" olarak güncellenir ve ekranda "3 talep onaylandı!" bildirimi belirir.
+
+*   **Alt Sahne 2.3: Eşyalar (`/items`):**
+    *   **Görünüm:** Şirketin tüm fiziksel varlıklarının listelendiği envanter tablosu.
+    *   **Tablo:** Sütunlar: "Eşya Adı", "Demirbaş No", "Seri No", "Durum" (renkli etiketlerle: Boşta-Mavi, Zimmetli-Yeşil, Arızalı-Sarı).
+    *   **Kritik Aksiyon (Hikaye Anı):** Bir "MacBook Pro" satırındaki "Geçmiş" (tarihçe ikonu) butonuna tıklanır. Açılan modalda, o laptop'un 2 yıl içinde 3 farklı çalışana zimmetlendiği ve iade edildiği kronolojik olarak net bir şekilde görülür.
+
+*   **Alt Sahne 2.4: Konumlar (`/locations`):**
+    *   **Görünüm:** Şirket lokasyonlarının (ofisler, depolar) listelendiği bir sayfa. Her konumun yanında o lokasyondaki toplam personel ve zimmetli eşya sayısı gösterilir.
+
+---
+
+**Sahne 3: Raporlama - Tek Tıkla Resmiyet**
+
+**Problem:** Manuel olarak hazırlanan, takibi zor ve standart olmayan zimmet formları ve raporlar.
+**Çözüm:** Sistem verilerinden anında oluşturulan, profesyonel ve standart PDF belgeleri.
+
+*   **Alt Sahne 3.1: PDF Çıktısı (Zimmet Teslim Tutanağı):**
+    *   **Görünüm:** Tarayıcıda yeni bir sekmede açılan, üzerinde şirket logosu, "ZİMMET TESLİM TUTANAĞI" başlığı, personel ve eşya bilgilerinin yer aldığı tablolar ve en altta "Teslim Eden" ve "Teslim Alan" için imza alanları bulunan resmi bir PDF belgesi.
+
+*   **Alt Sahne 3.2: Personel Raporu (`/personnel-report`):**
+    *   **Görünüm:** Ekranın ortasında büyük bir arama kutusu: "Personel Adı veya Sicil No Girin".
+    *   **Etkileşim:** Arama yapıldığında, personelin adı ve üzerindeki toplam zimmet sayısını gösteren bir özet kartı belirir. Bu karta tıklandığında, kullanıcı Sahne 6'da detaylandırılan Personel Detay Sayfası'na "zoom" efektiyle yönlendirilir.
+
+*   **Alt Sahne 3.3: Eşya Raporu (`/item-report`):**
+    *   **Görünüm:** "Demirbaş veya Seri No Girin" yazan bir arama kutusu.
+    *   **Etkileşim:** Arama yapıldığında, o eşyanın tüm zimmet geçmişini (kimlere, ne zaman verildiğini) gösteren detaylı bir tablo ekranda belirir.
+
+---
+
+**Sahne 4: İK İşlemleri - İnsanı Merkeze Alan Otomasyon**
+
+**Problem:** İşe alım, izin, mesai ve bordro gibi birbirinden kopuk ve manuel yürütülen İK süreçleri.
+**Çözüm:** Tüm İK yaşam döngüsünü tek bir çatı altında toplayan, akıllı ve entegre bir yönetim platformu.
+
+*   **Alt Sahne 4.1: İşe Alım Yönetimi (`/recruitment`):**
+    *   **Görünüm:** İK departmanının en çok kullandığı, dinamik ve interaktif bir Kanban panosu. Üstte "İş İlanı Seçin" dropdown menüsü.
+    *   **Sütunlar:** "Başvuru Alındı", "Ön Değerlendirme", "İK Mülakatı", "Teknik Mülakat", "Teklif", "İşe Alındı", "Reddedildi".
+    *   **Aday Kartları:** Her sütunda, adayları temsil eden, akıcı bir animasyonla sürüklenip bırakılabilen küçük kartlar.
+    *   **Aday Detay Modalı:** Bir karta tıklandığında açılan, adayın CV'si, mülakat ve teklif bilgilerini içeren sekmeli bir modal.
+    *   **Otomasyon Anı (Zirve Noktası):** Bir aday kartı "İşe Alındı" sütununa bırakıldığında, kartın üzerinde yeşil bir "tik" işareti belirir ve ekranda "Aday işe alındı ve personel kaydı oluşturuldu!" yazan bir bildirim çıkar. Arka planda, sistemin bu adaydan otomatik olarak bir personel kaydı oluşturduğu ve CV'sini yeni personelin evraklarına eklediği görsel olarak ima edilir.
+
+*   **Alt Sahne 4.2: Çalışan Süreçleri (Mesai & İzin):**
+    *   **Kişisel Ekranlar (`/my-attendance`, `/my-leaves`):** Çalışanın tek butonla mesai başlatıp bitirdiği veya izin talebi oluşturup imzalı form yüklediği basit ve odaklı arayüzler.
+    *   **Yönetim Ekranları (`/attendance-records`, `/leave-management`):** Yöneticilerin, tüm personelin mesai kayıtlarını veya izin taleplerini filtreleyerek gördüğü, tek tıkla onay/red işlemleri yapabildiği tablolar.
+
+*   **Alt Sahne 4.3: Finansal Süreçler (Maaş & Bordro):**
+    *   **Maaş Yönetimi (`/payroll-management`):** Tüm personelin brüt maaşlarının ve ek ödemelerinin yönetildiği bir tablo.
+    *   **Bordro İşlemleri (`/payroll-periods`):** Yöneticinin "Yeni Dönem Oluştur" butonu ile bir ay seçtiği, ardından "Tüm Bordroları Oluştur" butonuna basmasıyla sistemin tüm maaşları otomatik olarak hesapladığı ve son olarak "Banka Ödeme Listesi (CSV)" butonu ile dosyayı indirdiği 3 adımlık basit bir akış.
+
+---
+
+**Sahne 5: Yönetim Paneli - Tam Yetki ve Şeffaflık**
+
+**Problem:** Kimin neye yetkisi olduğu ve sistemde kimin ne işlem yaptığı konusundaki belirsizlik.
+**Çözüm:** Granüler yetkilendirme ve değiştirilemez denetim kayıtları ile tam kontrol ve şeffaflık.
+
+Sadece yetkili kullanıcıların erişebildiği, sistemin temel ayarlarının yapıldığı ekranlar.
+
+*   **Kullanıcı Yönetimi (`/admin`):** Kullanıcıların listelendiği, her kullanıcının yanında rolünün (Admin, User) belirtildiği kartlar halinde bir görünüm. "Yeni Kullanıcı Ekle", "Yetkileri Düzenle" ve "Şifre Sıfırla" gibi butonlar mevcut.
+*   **Personel Yönetimi (`/personnel`):** Şirketin tüm çalışanlarının kayıtlarının oluşturulduğu ve yönetildiği merkezi İK veritabanı tablosu.
+*   **Denetim Kayıtları (`/audit-logs`):** Sistemde yapılan her önemli işlemin ("KİM, NE ZAMAN, NE YAPTI") kaydedildiği, değiştirilemez, kullanıcıya ve tarih aralığına göre filtrelenebilen, Excel'e aktarılabilen detaylı bir log tablosu.
+
+---
+
+**Sahne 6: Kişisel Alan (Profilim & Ayarlar) - Çalışan Deneyimi**
+
+Sağ üst köşedeki kullanıcı menüsünden erişilen, kişiye özel ekranlar.
+
+*   **Profilim (`/personnel/:id/details`):** Bir çalışana ait her şeyin tek bir yerde toplandığı, sekmeli bir profil sayfası.
+    *   **Üst Kısım:** Personelin fotoğrafı, adı, sicil numarası, departmanı ve pozisyonu.
+    *   **Sekmeli İçerik Alanı:** "Zimmet Geçmişi", "İzin Geçmişi", "Mesai Geçmişi", "Evraklar" ve "İşlem Geçmişi" sekmeleri.
+*   **Ayarlar:** Kullanıcının, tablo görünümlerinde hangi sütunları görmek istediğini seçerek arayüzü kişiselleştirebildiği bir ayarlar sayfası.
+
+---
+
+**Genel Kullanıcı Deneyimi (UX) Unsurları:**
+*   **Bildirimler:** Ekranın sağ üst köşesinden kayarak çıkan, başarılı işlemler için yeşil, uyarılar için sarı, hatalar için kırmızı renkli `toast` bildirimleri.
+*   **Yükleme Animasyonları (Loaders):** Veri yüklenirken ekranın ortasında dönen, zarif bir spinner animasyonu.
+*   **Modallar:** Arka planı karartarak ekranın ortasında açılan, temiz ve odaklı formlar veya bilgi pencereleri.
+*   **Güvenlik:** Kullanıcı bir süre işlem yapmadığında ekranda "Oturumunuz sonlanmak üzere" uyarısı belirir ve süre dolduğunda otomatik olarak çıkış yapılır.
+
+**Kapanış Sahnesi - Nihai Mesaj:**
+
+"Asseta, dağınık süreçleri bütünleşik bir güce dönüştürür. Verimliliği artırın, şeffaflığı sağlayın ve organizasyonunuzun tüm potansiyelini ortaya çıkarın. Geleceğin yönetimi, bugün burada."

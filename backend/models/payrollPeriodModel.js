@@ -27,8 +27,6 @@ const payrollPeriodSchema = new mongoose.Schema(
       ref: "Location", // Şirketler Location modelinde tutuluyor
       required: [true, "Bordro dönemi bir şirketle ilişkilendirilmelidir."],
     },
-    // Bu döneme ait hesaplanmış bordro kayıtlarını tutacak
-    // payrolls: [{ type: mongoose.Schema.Types.ObjectId, ref: "PayrollRecord" }],
   },
   { timestamps: true }
 );

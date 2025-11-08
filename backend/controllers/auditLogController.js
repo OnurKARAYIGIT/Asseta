@@ -1,29 +1,45 @@
 const asyncHandler = require("express-async-handler");
 const AuditLog = require("../models/auditLogModel");
-const Personnel = require("../models/personnelModel");
 
-// @desc    Get all audit logs, optionally filtered by personnel
+// @desc    Get all audit logs with filtering and pagination
 // @route   GET /api/audit-logs
 // @access  Private/Admin
 const getAuditLogs = asyncHandler(async (req, res) => {
-  const { personnelId } = req.query;
+  const {
+    page = 1,
+    limit = 25,
+    userId,
+    personnelId,
+    startDate,
+    endDate,
+  } = req.query;
   let filter = {};
 
+  // Frontend'den gelen userId filtresini uygula
   if (personnelId) {
-    // Personel ID'sine karşılık gelen kullanıcıyı bul
-    const personnel = await Personnel.findById(personnelId).select(
-      "userAccount"
-    );
-    if (personnel && personnel.userAccount) {
-      filter["user._id"] = personnel.userAccount;
-    } else {
-      // Eğer personelin kullanıcı hesabı yoksa veya personel bulunamazsa boş sonuç döndür
-      return res.json([]);
-    }
+    filter["user"] = userId;
   }
 
-  const logs = await AuditLog.find(filter).sort({ createdAt: -1 }).limit(200); // Son 200 kaydı getir
-  res.json(logs);
+  // Personel detay sayfasından gelen personnelId filtresini uygula
+  if (personnelId) {
+    filter.entityId = personnelId;
+  }
+
+  // Tarih aralığı filtresini uygula
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) filter.createdAt.$gte = new Date(startDate);
+    if (endDate) filter.createdAt.$lte = new Date(endDate);
+  }
+
+  const count = await AuditLog.countDocuments(filter);
+  const logs = await AuditLog.find(filter)
+    .populate("user", "username") // Kullanıcı adını da getir
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit))
+    .skip((page - 1) * parseInt(limit));
+
+  res.json({ logs, total: count, page, pages: Math.ceil(count / limit) });
 });
 
 module.exports = { getAuditLogs };

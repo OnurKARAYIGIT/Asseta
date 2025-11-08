@@ -23,6 +23,7 @@ const ItemsPage = lazy(() => import("./components/items/ItemsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 const PersonnelReportPage = lazy(() => import("./pages/PersonnelReportPage"));
+const JobOpenings = lazy(() => import("./pages/JobOpeningsPage"));
 const PendingAssignmentsPage = lazy(() =>
   import("./pages/PendingAssignmentsPage")
 );
@@ -46,6 +47,8 @@ const PayrollPeriodDetailPage = lazy(() =>
   import("./pages/PayrollPeriodDetailPage.jsx")
 ); // YENİ BORDRO DÖNEM DETAY SAYFASI
 const MyPayrollsPage = lazy(() => import("./pages/MyPayrollsPage.jsx")); // YENİ BORDROLARIM SAYFASI
+const CandidatesPage = lazy(() => import("./pages/CandidatesPage.jsx")); // YENİ ADAY HAVUZU SAYFASI
+const RecruitmentPage = lazy(() => import("./pages/RecruitmentPage.jsx")); // YENİ İŞE ALIM YÖNETİMİ SAYFASI
 
 // Kök dizine gelen istekleri yönlendiren bileşen
 const RootRedirect = () => {
@@ -440,8 +443,57 @@ const AppRoutes = () => {
               </Suspense>
             }
           />
+          {/* --- YENİ İŞE ALIM ROTALARI --- */}
+          <Route
+            path="job-openings"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <JobOpenings />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="candidates"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <CandidatesPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
+          {/* --- YENİ İŞE ALIM YÖNETİMİ ROTASI --- */}
+          <Route
+            path="recruitment"
+            element={
+              <Suspense
+                fallback={
+                  <div className="p-8">
+                    <Loader />
+                  </div>
+                }
+              >
+                <PrivateRoute requiredPermission="admin">
+                  <RecruitmentPage />
+                </PrivateRoute>
+              </Suspense>
+            }
+          />
         </Route>
-
         <Route path="*" element={<h1>404 - Sayfa Bulunamadı</h1>} />
       </Routes>
     </Suspense>

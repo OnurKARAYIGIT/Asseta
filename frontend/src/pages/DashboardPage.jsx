@@ -19,8 +19,11 @@ import {
   FaUsers,
   FaMapMarkerAlt,
   FaHourglassHalf,
+  FaBriefcase,
   FaUserClock,
   FaBusinessTime,
+  FaUserFriends,
+  FaHandshake,
 } from "react-icons/fa";
 import {
   Chart as ChartJS,
@@ -92,28 +95,28 @@ const DashboardPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <StatCard
                 className="total-assignments-card"
-                icon={<FaClipboardList />}
+                icon={<FaClipboardList className="text-primary" />}
                 title="Toplam Zimmet"
                 value={stats.totalAssignments}
                 linkTo="/assignments"
               />
               <StatCard
                 className="total-items-card"
-                icon={<FaBoxOpen />}
+                icon={<FaBoxOpen className="text-secondary" />}
                 title="Toplam Eşya"
                 value={stats.totalItems}
                 linkTo="/items"
               />
               <StatCard
                 className="total-users-card"
-                icon={<FaUsers />}
+                icon={<FaUsers className="text-indigo-500" />}
                 title="Toplam Personel"
                 value={stats.totalPersonnel} // Değişiklik yok, sadece bağlam için burada
                 linkTo="/personnel"
               />
               <StatCard
                 className="total-locations-card"
-                icon={<FaMapMarkerAlt />}
+                icon={<FaMapMarkerAlt className="text-purple-500" />}
                 title="Toplam Konum"
                 value={stats.totalLocations}
                 linkTo="/locations"
@@ -124,28 +127,28 @@ const DashboardPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
                 className="pending-leaves-card"
-                icon={<FaHourglassHalf />}
+                icon={<FaHourglassHalf className="text-warning" />}
                 title="Bekleyen İzin Talebi"
                 value={stats.pendingLeaveCount}
                 linkTo="/leave-management"
               />
               <StatCard
                 className="active-employees-card"
-                icon={<FaUserClock />}
+                icon={<FaUserClock className="text-success" />}
                 title="Bugün Aktif Çalışan"
                 value={stats.activeEmployeesToday}
                 linkTo="/attendance-records"
               />
               <StatCard
                 className="overtime-card"
-                icon={<FaBusinessTime />}
+                icon={<FaBusinessTime className="text-info" />}
                 title="Bu Ayki Fazla Mesai"
                 value={`${(stats.totalOvertimeThisMonth / 60).toFixed(1)} sa`}
                 linkTo="/attendance-records"
               />
               <StatCard
                 className="payroll-card"
-                icon={<FaMoneyCheckAlt />}
+                icon={<FaMoneyCheckAlt className="text-primary" />}
                 title="Son Maaş Ödemesi"
                 value={stats.lastPayrollTotal.toLocaleString("tr-TR", {
                   style: "currency",
@@ -154,6 +157,41 @@ const DashboardPage = () => {
                   maximumFractionDigits: 0,
                 })}
                 linkTo="/payroll-periods"
+              />
+            </div>
+
+            {/* --- YENİ İŞE ALIM İSTATİSTİK KARTLARI --- */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <StatCard
+                className="open-jobs-card"
+                icon={<FaBriefcase className="text-blue-500" />}
+                title="Açık İş İlanı"
+                value={stats.openJobOpeningsCount}
+                linkTo="/job-openings?status=Açık"
+              />
+              <StatCard
+                className="candidates-pool-card"
+                icon={<FaUserFriends className="text-teal-500" />}
+                title="Aday Havuzu"
+                value={stats.totalCandidatesCount}
+                linkTo="/candidates"
+              />
+              <StatCard
+                className="offers-pending-card"
+                icon={<FaHandshake className="text-cyan-500" />}
+                title="Teklif Aşamasında"
+                value={stats.offersPendingCount}
+                linkTo={
+                  stats.firstOfferJobId
+                    ? `/recruitment?status=Teklif&jobId=${stats.firstOfferJobId}`
+                    : "/recruitment?status=Teklif"
+                }
+              />
+              {/* Gelecekteki bir metrik için boş bir kart bırakılabilir */}
+              <StatCard
+                className="placeholder-card"
+                title="Yeni Metrik"
+                value="-"
               />
             </div>
 

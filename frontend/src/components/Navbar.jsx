@@ -15,8 +15,11 @@ import {
   FaClock,
   FaUsersCog,
   FaChevronDown,
+  FaUsers,
   FaFolderOpen,
   FaAddressCard, // Yeni ikon
+  FaUserPlus, // İşe alım için yeni ikon
+  FaBriefcase,
   FaSignInAlt,
   FaMoneyBillWave,
   FaSearch,
@@ -127,9 +130,7 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
     },
     {
       className: "nav-audit",
-      // --- YENİ İK İŞLEMLERİ MENÜSÜ ---
       label: "İK İşlemleri",
-      className: "nav-hr",
       icon: <FaUserClock />,
       iconColorClass: "text-cyan-400",
       permission: "ik-islemleri", // Bu genel bir yetki, alt menüler kendi yetkilerini kontrol edecek
@@ -181,6 +182,15 @@ const Navbar = ({ inactivityTime, isTimeoutWarning }) => {
           icon: <FaFolderOpen />, // Yeni ikon
           iconColorClass: "text-orange-400",
           permission: "admin",
+        },
+        // YENİ: Birleştirilmiş İşe Alım Yönetimi Sayfası
+        {
+          to: "/recruitment",
+          label: "İşe Alım Yönetimi",
+          className: "nav-recruitment",
+          icon: <FaUserPlus />,
+          iconColorClass: "text-blue-400",
+          permission: "admin", // veya ilgili İK yetkisi
         },
       ],
     },

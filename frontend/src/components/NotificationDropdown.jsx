@@ -12,6 +12,11 @@ import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import Loader from "./Loader";
 
+const NOTIFICATION_TYPES = {
+  LEAVE_APPROVED: "leave_approved",
+  LEAVE_REJECTED: "leave_rejected",
+};
+
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -19,7 +24,7 @@ const NotificationDropdown = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ["notifications"],
-    queryFn: () => axiosInstance.get("/notifications").then((res) => res.data),
+    queryFn: () => axiosInstance.get("/notifications").then((res) => res.data), // URL'den /api kaldırıldı
     refetchInterval: 1000 * 60, // 1 dakikada bir kontrol et
     refetchOnWindowFocus: true,
   });
@@ -29,14 +34,14 @@ const NotificationDropdown = () => {
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId) =>
-      axiosInstance.put(`/notifications/${notificationId}/read`),
+      axiosInstance.put(`/notifications/${notificationId}/read`), // URL'den /api kaldırıldı
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
   const markAllAsReadMutation = useMutation({
-    mutationFn: () => axiosInstance.put("/notifications/read-all"),
+    mutationFn: () => axiosInstance.put("/notifications/read-all"), // URL'den /api kaldırıldı
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -61,9 +66,9 @@ const NotificationDropdown = () => {
 
   const getIconForType = (type) => {
     switch (type) {
-      case "leave_approved":
+      case NOTIFICATION_TYPES.LEAVE_APPROVED:
         return <FaCheckCircle className="text-success" />;
-      case "leave_rejected":
+      case NOTIFICATION_TYPES.LEAVE_REJECTED:
         return <FaTimesCircle className="text-danger" />;
       default:
         return <FaInfoCircle className="text-info" />;

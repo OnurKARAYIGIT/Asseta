@@ -18,8 +18,12 @@ const Personnel = require("./models/personnelModel");
 const Item = require("./models/itemModel");
 const Assignment = require("./models/assignmentModel");
 const Location = require("./models/locationModel");
+const Candidate = require("./models/candidateModel.js"); // YENİ: Aday modelini import et
 const AuditLog = require("./models/auditLogModel");
+const Interview = require("./models/interviewModel.js"); // YENİ: Mülakat modelini import et
 const AttendanceRecord = require("./models/attendanceRecordModel.js"); // YENİ: Mesai Kaydı modelini import et
+const JobOpening = require("./models/jobOpeningModel.js"); // YENİ: İş İlanı modelini import et
+const Application = require("./models/applicationModel.js"); // YENİ: Başvuru modelini import et
 const SalaryComponent = require("./models/salaryComponent.js");
 const Leave = require("./models/leaveModel.js");
 const PayrollPeriod = require("./models/payrollPeriodModel.js");
@@ -76,6 +80,10 @@ const clearDatabase = async () => {
       Item.deleteMany(),
       Assignment.deleteMany(),
       Location.deleteMany(),
+      Candidate.deleteMany(),
+      JobOpening.deleteMany(),
+      Application.deleteMany(),
+      Interview.deleteMany(),
       AuditLog.deleteMany(),
       AttendanceRecord.deleteMany(), // YENİ: Mesai kayıtlarını da temizle
       SalaryComponent.deleteMany(),
@@ -131,6 +139,205 @@ const seedLocations = async () => {
     istanbulSube: createdLocations[1],
     izmirDepo: createdLocations[2],
   };
+};
+
+/**
+ * YENİ: Aday (Candidate) verilerini oluşturur.
+ */
+const seedCandidates = async () => {
+  const sources = [
+    "Kariyer.net",
+    "LinkedIn",
+    "Referans",
+    "İş-Kur",
+    "Web Sitesi",
+  ];
+  const tags = ["React", "Node.js", "JavaScript", "Proje Yönetimi", "MongoDB"];
+  const candidatesToCreate = [];
+
+  for (let i = 1; i <= 100; i++) {
+    const fullName = `${faker.person.firstName()} ${faker.person.lastName()}`;
+    candidatesToCreate.push({
+      fullName,
+      email: faker.internet.email({
+        firstName: fullName.split(" ")[0],
+        lastName: fullName.split(" ")[1],
+      }),
+      phone: faker.phone.number(),
+      source: getRandomElement(sources),
+      tags: faker.helpers.arrayElements(tags, { min: 1, max: 3 }), // Rastgele 1-3 arası etiket ekle
+      resumePaths: [`uploads/cv_${i}.pdf`], // Örnek dosya yolu
+    });
+  }
+
+  const createdCandidates = await Candidate.insertMany(candidatesToCreate);
+  console.log(`${createdCandidates.length} aday oluşturuldu.`.green.inverse);
+  return createdCandidates;
+};
+
+/**
+ * YENİ: İş İlanı (JobOpening) verilerini oluşturur.
+ */
+const seedJobOpenings = async (locationData) => {
+  const jobOpeningsToCreate = [
+    {
+      title: "Kıdemli Frontend Geliştirici (React)",
+      department: "IT",
+      company: locationData.merkezOfis._id,
+      description:
+        "React ve modern frontend teknolojilerinde deneyimli, ekibe liderlik edebilecek bir geliştirici arıyoruz.",
+      requirements: "En az 4 yıl React deneyimi, TypeScript, Redux/Context.",
+      status: "Açık",
+    },
+    {
+      title: "Backend Geliştirici (Node.js)",
+      department: "IT",
+      company: locationData.istanbulSube._id,
+      description:
+        "Node.js, Express ve MongoDB kullanarak ölçeklenebilir API'ler geliştirecek bir takım arkadaşı arıyoruz.",
+      requirements: "Node.js, RESTful API, Veritabanı tasarımı.",
+      status: "Açık",
+    },
+    {
+      title: "İK Uzmanı",
+      department: "İK",
+      company: locationData.merkezOfis._id,
+      description:
+        "İşe alım, performans yönetimi ve çalışan ilişkileri süreçlerini yürütecek deneyimli bir İK Uzmanı.",
+      requirements:
+        "Üniversitelerin ilgili bölümlerinden mezun, 3 yıl deneyim.",
+      status: "Dolduruldu",
+    },
+    {
+      title: "Satış Temsilcisi",
+      department: "Satış",
+      company: locationData.istanbulSube._id,
+      description:
+        "Müşteri portföyünü genişletecek, hedef odaklı ve enerjik satış temsilcileri arıyoruz.",
+      requirements: "İletişim becerileri yüksek, en az 1 yıl satış deneyimi.",
+      status: "Açık",
+    },
+    {
+      title: "Depo Sorumlusu",
+      department: "Operasyon",
+      company: locationData.izmirDepo._id,
+      description:
+        "Depo giriş-çıkış süreçlerini yönetecek, stok takibi yapacak bir sorumlu aranmaktadır.",
+      requirements: "Benzer pozisyonda deneyim, MS Office bilgisi.",
+      status: "İptal Edildi",
+    },
+  ];
+
+  const createdJobOpenings = await JobOpening.insertMany(jobOpeningsToCreate);
+  console.log(
+    `${createdJobOpenings.length} iş ilanı oluşturuldu.`.green.inverse
+  );
+  return createdJobOpenings;
+};
+
+/**
+ * YENİ: Başvuru (Application) verilerini oluşturur.
+ */
+const seedApplications = async (
+  createdCandidates,
+  createdJobOpenings,
+  allPersonnel
+) => {
+  const applicationStatuses = [
+    "Başvuru Alındı",
+    "Ön Değerlendirme",
+    "İK Mülakatı",
+    "Teknik Mülakat",
+    "Teklif",
+  ];
+
+  const applicationsToCreate = [];
+  const openJobs = createdJobOpenings.filter((job) => job.status === "Açık");
+
+  for (const job of openJobs) {
+    // Her açık ilana 10-20 arası başvuru yap
+    const applicationCount = faker.number.int({ min: 10, max: 20 });
+    const candidatesForJob = faker.helpers.arrayElements(
+      createdCandidates,
+      applicationCount
+    );
+
+    for (const candidate of candidatesForJob) {
+      const status = getRandomElement(applicationStatuses);
+      let offerData = null;
+
+      // Eğer durum "Teklif" ise, başvuruya bir teklif objesi ekle
+      if (status === "Teklif") {
+        offerData = {
+          offeredSalary: faker.finance.amount({
+            min: 25000,
+            max: 50000,
+            dec: 0,
+          }),
+          currency: "TRY",
+          startDate: faker.date.future({ years: 0.1 }),
+          notes: "Standart yan haklar paketi dahildir.",
+          status: "Beklemede",
+        };
+      }
+
+      applicationsToCreate.push({
+        candidate: candidate._id,
+        jobOpening: job._id,
+        status: status,
+        offer: offerData, // Teklif verisini ekle
+      });
+    }
+  }
+
+  const createdApplications = await Application.insertMany(
+    applicationsToCreate
+  );
+  console.log(
+    `${applicationsToCreate.length} başvuru oluşturuldu.`.green.inverse
+  );
+  return createdApplications;
+};
+
+/**
+ * YENİ: Mülakat (Interview) verilerini oluşturur.
+ * Bu fonksiyon, başvurular oluşturulduktan sonra çalışmalıdır.
+ */
+const seedInterviews = async (createdApplications, allPersonnel) => {
+  console.log("Mülakat verileri oluşturuluyor...".cyan);
+  const interviewsToCreate = [];
+
+  // Mülakatçı olabilecek personelleri seç (örneğin ilk 20 personel)
+  const potentialInterviewers = allPersonnel.slice(0, 20);
+
+  // Mülakat aşamasındaki başvuruları bul
+  const applicationsForInterview = createdApplications.filter(
+    (app) => app.status === "İK Mülakatı" || app.status === "Teknik Mülakat"
+  );
+
+  for (const app of applicationsForInterview) {
+    // Her mülakat başvurusu için 1 veya 2 mülakatçı seç
+    const interviewers = faker.helpers.arrayElements(potentialInterviewers, {
+      min: 1,
+      max: 2,
+    });
+
+    interviewsToCreate.push({
+      application: app._id,
+      interviewType: app.status, // Başvuru durumu ile aynı türde mülakat
+      scheduledDate: faker.date.between({
+        from: new Date(),
+        to: new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000), // Önümüzdeki 2 hafta içinde
+      }),
+      interviewers: interviewers.map((p) => p._id),
+      notes: "Seeder tarafından otomatik oluşturulmuş mülakat.",
+    });
+  }
+
+  await Interview.insertMany(interviewsToCreate);
+  console.log(
+    `${interviewsToCreate.length} mülakat kaydı oluşturuldu.`.green.inverse
+  );
 };
 
 /**
@@ -594,22 +801,6 @@ const seedAssignments = async (
   console.log(
     `${assignmentsToCreate.length} zimmet kaydı oluşturuldu.`.green.inverse
   );
-
-  // Ekstra Senaryo: Yetim Kayıt Oluşturma
-  console.log("4. Ekstra 'yetim kayıt' senaryosu oluşturuluyor...".yellow);
-  const personnelToDelete = await Personnel.findOne({ employeeId: "P499" });
-  if (personnelToDelete) {
-    // Bu personele ait zimmetlerin 'personnel' alanını null yap
-    await Assignment.updateMany(
-      { personnel: personnelToDelete._id },
-      { personnel: null }
-    );
-    await personnelToDelete.deleteOne();
-    console.log(
-      `'${personnelToDelete.fullName}' personeli silindi, zimmetleri 'yetim' bırakıldı.`
-        .yellow.inverse
-    );
-  }
 };
 
 /**
@@ -899,10 +1090,24 @@ const importData = async () => {
     console.log("Veri tohumlama işlemi başlıyor...".blue.bold);
     await clearDatabase();
 
+    // --- İŞE ALIM VERİLERİ ---
+    console.log("--- İşe Alım Modülü Verileri Oluşturuluyor ---".blue.bold);
+    const createdCandidates = await seedCandidates();
+    const locationDataForJobs = await seedLocations(); // Konumları iş ilanları için tekrar çek
+
     const locationData = await seedLocations();
     const createdPersonnel = await seedPersonnel(locationData.createdLocations);
     const userData = await seedUsers(createdPersonnel);
     const createdItems = await seedItems();
+
+    const createdJobOpenings = await seedJobOpenings(locationDataForJobs);
+    const createdApplications = await seedApplications(
+      createdCandidates,
+      createdJobOpenings,
+      createdPersonnel
+    );
+    await seedInterviews(createdApplications, createdPersonnel); // Mülakatları oluştur
+
     await seedAssignments(
       createdItems,
       createdPersonnel,
